@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Header } from "@/components/ui/Header";
+import { CategoryArt } from "@/components/ui/CategoryArt";
 import { CATALOG, totalEventTypeCount } from "@/data/catalog";
+
+// Render on demand to avoid the memory-heavy static-generation step on
+// low-memory machines.
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   const typeCount = totalEventTypeCount();
@@ -98,25 +103,41 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Categories */}
+        {/* Categories — choose an event category, each with its own
+            colorful illustration on a deep-purple stage. */}
         <section className="mx-auto max-w-7xl px-4 pb-20">
-          <h2 className="font-display text-3xl font-semibold">What are you planning?</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <h2 className="font-display text-3xl font-semibold">Choose your event category</h2>
+          <p className="mt-2 max-w-2xl text-white/60">
+            Pick the celebration you&apos;re planning. Each opens the guided setup for that event type.
+          </p>
+          <ul className="mt-8 grid list-none gap-5 p-0 sm:grid-cols-2 lg:grid-cols-4" role="list">
             {CATALOG.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/plan/new?category=${c.slug}`}
-                className="vv-glass group rounded-2xl p-5 transition hover:border-saffron-500/40 hover:bg-white/[0.06]"
-              >
-                <div className="text-3xl" aria-hidden>
-                  {c.icon}
-                </div>
-                <h3 className="mt-3 font-semibold">{c.name}</h3>
-                <p className="mt-1 text-sm text-white/60">{c.description}</p>
-                <p className="mt-3 text-xs text-saffron-400/80">{c.eventTypes.length} event types →</p>
-              </Link>
+              <li key={c.slug}>
+                <Link
+                  href={`/plan/new?category=${c.slug}`}
+                  aria-label={`Plan a ${c.name} event — ${c.eventTypes.length} event types`}
+                  className="group block overflow-hidden rounded-2xl border border-white/10 bg-ink-800/60 transition hover:border-saffron-500/50 hover:shadow-glow focus-visible:border-saffron-500/60"
+                >
+                  {/* Illustration tile (deep purple, colorful artwork) */}
+                  <div className="relative aspect-[5/4] w-full overflow-hidden bg-[#1c1033]">
+                    <CategoryArt slug={c.slug} className="h-full w-full transition-transform duration-300 group-hover:scale-[1.04]" />
+                    <span
+                      className="absolute left-2 top-2 rounded-full bg-black/35 px-2 py-0.5 text-base leading-none backdrop-blur-sm"
+                      aria-hidden="true"
+                    >
+                      {c.icon}
+                    </span>
+                  </div>
+                  {/* Text label + meta (keeps the card accessible & on-brand) */}
+                  <div className="p-4">
+                    <h3 className="font-semibold group-hover:text-saffron-400">{c.name}</h3>
+                    <p className="mt-1 text-sm text-white/60">{c.description}</p>
+                    <p className="mt-3 text-xs text-saffron-400/80">{c.eventTypes.length} event types →</p>
+                  </div>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
 
         <footer className="border-t border-white/10 py-8 text-center text-sm text-white/50">
