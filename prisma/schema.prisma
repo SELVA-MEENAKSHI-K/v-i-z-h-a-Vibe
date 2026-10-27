@@ -1,0 +1,348 @@
+// VizhaVibe data model.
+// Default datasource is SQLite for a zero-config demo. To use PostgreSQL,
+// set provider = "postgresql" and point DATABASE_URL at your Postgres server
+// (see .env.example). The schema is written to be portable between the two.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog: categories & event types (data-driven, not hard-coded in the UI).
+// ---------------------------------------------------------------------------
+
+model EventCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  icon        String? // emoji or icon key
+  sortOrder   Int      @default(0)
+  eventTypes  EventType[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EventType {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  name           String
+  description    String?
+  // Comma-separated cultural styles this type commonly maps to (advisory only).
+  defaultStyles  String? // e.g. "tamil,kerala"
+  sortOrder      Int           @default(0)
+  category       EventCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId     String
+  plans          EventPlan[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([categoryId])
+}
+
+// ---------------------------------------------------------------------------
+// Users (lightweight; demo works without accounts).
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String      @id @default(cuid())
+  // Demo users have isDemo = true and no credentials.
+  email     String?     @unique
+  name      String?
+  isDemo    Boolean     @default(false)
+  plans     EventPlan[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Event plans — the central planning artifact.
+// ---------------------------------------------------------------------------
+
+model EventPlan {
+  id          String   @id @default(cuid())
+  // Public, unguessable share token.
+  shareToken  String   @unique @default(cuid())
+  title       String
+  city        String // "Madurai" | "Chennai" | "Bangalore" (free text allowed)
+  eventType   EventType @relation(fields: [eventTypeId], references: [id])
+  eventTypeId String
+  // Date range (single-day plans set both to same value).
+  startDate   DateTime?
+  endDate     DateTime?
+  guestCount  Int      @default(50)
+  budget      Int      @default(0) // in INR; 0 = unset
+  // Comma-separated cultural styles the user chose.
+  styles      String? // e.g. "tamil,north-indian"
+  // Freeform user preferences (dietary, accessibility, notes) as JSON string.
+  preferences String? // JSON
+  notes       String?
+
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  ownerId     String?
+
+  selectedVenue   SavedVenue?  @relation("PlanSelectedVenue", fields: [selectedVenueId], references: [id])
+  selectedVenueId String?      @unique
+
+  savedVenues SavedVenue[]  @relation("PlanSavedVenues")
+  layout      VenueLayout?
+  budgetItems BudgetItem[]
+  menus       Menu[]
+  tasks       TimelineTask[]
+  recommendations AiRecommendation[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([eventTypeId])
+  @@index([ownerId])
+  @@index([city])
+}
+
+// ---------------------------------------------------------------------------
+// Venues — reference records for saving to plans.
+//
+// IMPORTANT (Google policy): for Google-sourced venues we persist ONLY the
+// Place ID plus our own app data (user notes, selection, layout). We do NOT
+// store Google-returned names/addresses/ratings/photos as durable facts beyond
+// Google's allowed caching window; they are re-fetched live when displayed.
+// Columns like `name`/`address` are an optional convenience cache that may be
+// cleared; `providerId` (Place ID) is the durable key.
+// ---------------------------------------------------------------------------
+
+model Venue {
+  id           String  @id @default(cuid())
+  // Provider place id (Google Place ID) when available; null for sample/catalog.
+  providerId   String? @unique
+  // "google" | "sample" | "catalog" | "manual"
+  source       String  @default("sample")
+  name         String
+  address      String?
+  city         String?
+  lat          Float?
+  lng          Float?
+  rating       Float?
+  reviewCount  Int?
+  website      String?
+  phone        String?
+  // JSON array of opening-hours strings (as provided).
+  openingHours String?
+  // JSON array of photo references/urls (as provided).
+  photos       String?
+  // JSON of raw provider types (e.g. ["banquet_hall"]).
+  venueTypes   String?
+  mapsUrl      String?
+  // Attribution / provenance.
+  attribution  String?
+  lastCheckedAt DateTime?
+  isSample     Boolean @default(true)
+
+  savedVenues  SavedVenue[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([city])
+  @@index([source])
+}
+
+// ---------------------------------------------------------------------------
+// CatalogVenue — admin-managed, source-verified venue facts that VizhaVibe is
+// AUTHORIZED to store (venue-submitted info, or a source whose terms permit
+// storage). This is the ONLY place we keep persistent venue facts such as
+// capacity, price range, and amenities. Every record carries source +
+// verification metadata. Never populate this with guessed data.
+// ---------------------------------------------------------------------------
+
+model CatalogVenue {
+  id             String  @id @default(cuid())
+  name           String
+  // "mahal" | "wedding_hall" | "banquet_hall" | "party_hall" | "convention_center" | "resort" | "garden" | "community_hall" | ...
+  venueType      String
+  address        String?
+  city           String
+  area           String?
+  lat            Float?
+  lng            Float?
+  phone          String?
+  email          String?
+  website        String?
+  // Capacity (verified only). Null => "Contact venue to confirm."
+  capacityMin    Int?
+  capacityMax    Int?
+  // Price range in INR (verified only). Null => "Contact venue to confirm."
+  priceMin       Int?
+  priceMax       Int?
+  // JSON array of amenities (verified only).
+  amenities      String?
+  // Google Place ID for map link / live detail lookup (optional).
+  placeId        String?
+  mapsUrl        String?
+
+  // --- Provenance & verification (required) ---
+  sourceName     String  // e.g. "Venue-submitted", "Official website"
+  sourceUrl      String? // link to the authorized source
+  // "verified" | "unverified" | "pending"
+  verification   String  @default("unverified")
+  lastVerifiedAt DateTime?
+  // Whether this record is allowed to be shown publicly.
+  published      Boolean @default(true)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([city])
+  @@index([venueType])
+  @@index([verification])
+}
+
+// A venue saved to a specific plan (shortlist / selection).
+model SavedVenue {
+  id        String    @id @default(cuid())
+  plan      EventPlan @relation("PlanSavedVenues", fields: [planId], references: [id], onDelete: Cascade)
+  planId    String
+  venue     Venue     @relation(fields: [venueId], references: [id])
+  venueId   String
+  note      String?
+  createdAt DateTime  @default(now())
+
+  // Back-relation for the plan's single selected venue.
+  selectedByPlan EventPlan? @relation("PlanSelectedVenue")
+
+  @@unique([planId, venueId])
+  @@index([planId])
+}
+
+// ---------------------------------------------------------------------------
+// 3D layout & placed objects.
+// ---------------------------------------------------------------------------
+
+model VenueLayout {
+  id        String   @id @default(cuid())
+  plan      EventPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId    String   @unique
+  // Scene bounds / room size in meters.
+  roomWidth  Float   @default(24)
+  roomDepth  Float   @default(18)
+  // Whether geometry is illustrative (true) vs. a verified replica (always
+  // true here — we never claim architectural accuracy).
+  illustrative Boolean @default(true)
+  objects   PlacedObject[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PlacedObject {
+  id        String   @id @default(cuid())
+  layout    VenueLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  layoutId  String
+  // "round-table" | "rect-table" | "chair" | "stage" | "dance-floor" |
+  // "buffet" | "entrance" | "decor-arch" | "pillar" | "service"
+  kind      String
+  label     String?
+  // Transform.
+  posX      Float    @default(0)
+  posY      Float    @default(0)
+  posZ      Float    @default(0)
+  rotY      Float    @default(0)
+  scale     Float    @default(1)
+  // How many guests this object seats (tables/chairs). 0 for non-seating.
+  seats     Int      @default(0)
+  // Visual style token.
+  style     String?
+  createdAt DateTime @default(now())
+
+  @@index([layoutId])
+}
+
+// ---------------------------------------------------------------------------
+// Budget.
+// ---------------------------------------------------------------------------
+
+model BudgetItem {
+  id         String   @id @default(cuid())
+  plan       EventPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId     String
+  category   String // "venue" | "catering" | "decor" | "entertainment" | ...
+  label      String
+  quantity   Int      @default(1)
+  unitCostMin Int     @default(0)
+  unitCostMax Int     @default(0)
+  // Is this an AI/estimate (unverified) vs a user-confirmed figure?
+  estimated  Boolean  @default(true)
+  assumption String?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([planId])
+}
+
+// ---------------------------------------------------------------------------
+// Menus & dietary preferences.
+// ---------------------------------------------------------------------------
+
+model Menu {
+  id        String   @id @default(cuid())
+  plan      EventPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId    String
+  style     String // "tamil" | "kerala" | "telugu" | "kannada" | "north-indian" | "mixed"
+  // "veg" | "non-veg" | "both"
+  dietary   String   @default("veg")
+  // JSON array of courses: [{ course, items: [] }]
+  courses   String
+  notes     String?
+  estimated Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+}
+
+// ---------------------------------------------------------------------------
+// Timeline tasks.
+// ---------------------------------------------------------------------------
+
+model TimelineTask {
+  id        String   @id @default(cuid())
+  plan      EventPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId    String
+  title     String
+  detail    String?
+  // Suggested deadline (relative days before event stored in offsetDays too).
+  dueDate   DateTime?
+  offsetDays Int     @default(0) // days before event
+  done      Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([planId])
+}
+
+// ---------------------------------------------------------------------------
+// AI recommendations — always distinguishable from verified facts.
+// ---------------------------------------------------------------------------
+
+model AiRecommendation {
+  id        String   @id @default(cuid())
+  plan      EventPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId    String
+  // "theme" | "decor" | "menu" | "budget" | "timeline" | "chat"
+  kind      String
+  // "demo" (deterministic) | "openai" | ...
+  provider  String   @default("demo")
+  // The structured payload as JSON string.
+  payload   String
+  prompt    String?
+  // Always true for model output: this is a suggestion, not a verified fact.
+  isGenerated Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([planId])
+  @@index([kind])
+}
