@@ -7,7 +7,7 @@ export async function apiGet<T>(url: string): Promise<T> {
   return json.data as T;
 }
 
-export async function apiSend<T>(url: string, method: "POST" | "PATCH", body: unknown): Promise<T> {
+export async function apiSend<T>(url: string, method: "POST" | "PATCH" | "PUT" | "DELETE", body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
     headers: { "Content-Type": "application/json" },

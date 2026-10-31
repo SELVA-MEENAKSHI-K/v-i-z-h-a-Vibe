@@ -32,3 +32,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local dev logs & scratch files
+dev.log
+*.log
+_*.txt
+_*.json
+_*.mjs
+_*.mts

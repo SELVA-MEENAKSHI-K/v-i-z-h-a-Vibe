@@ -4,13 +4,16 @@ import { useState } from "react";
 import type { Plan, PlanVenue } from "./types";
 import { apiGet, apiSend, formatINR } from "@/lib/client";
 import { SampleBadge, LiveBadge, CatalogBadge, UnverifiedTag } from "@/components/ui/Badges";
+import { SmartImage } from "@/components/ui/SmartImage";
 
 type SearchResult = {
   live: boolean;
-  usedGoogle: boolean;
+  usedProvider: boolean;
+  provider: string;
+  usedLocation: boolean;
   keyMissing: boolean;
   sampleOnly: boolean;
-  googleError: string | null;
+  providerError: string | null;
   catalogCount: number;
   city: string | null;
   query: string | null;
@@ -33,20 +36,34 @@ const VENUE_TYPES = [
 export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Plan) => void }) {
   const [query, setQuery] = useState("");
   const [venueType, setVenueType] = useState("");
+  const [radiusKm, setRadiusKm] = useState(25);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
-  async function run() {
+  async function run(useCoords?: { lat: number; lng: number } | null) {
     setLoading(true);
     setError(null);
     setRateLimited(false);
     try {
-      const params = new URLSearchParams({ city: plan.city });
+      const params = new URLSearchParams();
+      // When searching by live location, send coordinates; otherwise the city.
+      const loc = useCoords ?? null;
+      if (loc) {
+        params.set("lat", String(loc.lat));
+        params.set("lng", String(loc.lng));
+        params.set("radiusKm", String(radiusKm));
+      } else {
+        params.set("city", plan.city);
+      }
       if (query.trim()) params.set("query", query.trim());
       if (venueType) params.set("venueType", venueType);
+      if (verifiedOnly) params.set("verifiedOnly", "1");
       const data = await apiGet<SearchResult>(`/api/venues/search?${params.toString()}`);
       setResult(data);
     } catch (e) {
@@ -58,13 +75,45 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
     }
   }
 
+  // Request the browser's current GPS location, then run a "near me" search.
+  function useMyLocation() {
+    setError(null);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setError("Location isn't supported on this device or browser.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const c = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCoords(c);
+        setLocating(false);
+        run(c);
+      },
+      (err) => {
+        setLocating(false);
+        setError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied. Allow location access, or search by city instead."
+            : "Couldn't get your location. Try again or search by city.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  }
+
+  function clearLocation() {
+    setCoords(null);
+    run(null);
+  }
+
   async function saveVenue(v: PlanVenue, select: boolean) {
     setSavingId(v.providerId || v.id);
     try {
-      // We persist only the Place ID + our own app data for Google venues.
+      // We persist only the provider place ID + our own app data for live venues.
       const updated = await apiSend<Plan>(`/api/plans/${plan.shareToken}/venues`, "POST", {
         providerId: v.providerId || v.id,
-        source: v.source === "google" ? "google" : v.source === "catalog" ? "catalog" : "sample",
+        source: v.source === "geoapify" ? "geoapify" : v.source === "catalog" ? "catalog" : "sample",
         name: v.name,
         address: v.address,
         city: v.city,
@@ -90,7 +139,7 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
   }
 
   function sourceBadge(v: PlanVenue) {
-    if (v.source === "google") return <LiveBadge />;
+    if (v.source === "geoapify") return <LiveBadge />;
     if (v.source === "catalog") return <CatalogBadge verified={v.verified} />;
     return <SampleBadge />;
   }
@@ -102,7 +151,7 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && run()}
+          onKeyDown={(e) => e.key === "Enter" && run(coords)}
           placeholder={`Search ${plan.city} venues — mahal, wedding hall, party hall, or a venue name`}
           aria-label={`Search venues in ${plan.city}`}
           className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm"
@@ -120,13 +169,62 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
           ))}
         </select>
         <button
-          onClick={run}
+          onClick={() => run(coords)}
           disabled={loading}
           className="rounded-lg bg-saffron-500 px-5 py-2 text-sm font-semibold text-ink-900 hover:bg-saffron-400 disabled:opacity-60"
         >
           {loading ? "Searching…" : "Search"}
         </button>
       </div>
+
+      {/* Real-time location search */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={useMyLocation}
+          disabled={locating || loading}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-peacock-500/50 bg-peacock-500/10 px-3 py-2 text-sm font-medium text-peacock-400 hover:bg-peacock-500/20 disabled:opacity-60"
+        >
+          <span aria-hidden>📍</span>
+          {locating ? "Locating…" : "Use my location"}
+        </button>
+        <label className="flex items-center gap-1.5 text-xs text-white/60">
+          Within
+          <select
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(Number(e.target.value))}
+            aria-label="Search radius in kilometers"
+            className="vv-select rounded-md border border-white/15 px-2 py-1 text-xs"
+          >
+            {[5, 10, 25, 50].map((r) => (
+              <option key={r} value={r} className="bg-ink-800 text-white">
+                {r} km
+              </option>
+            ))}
+          </select>
+        </label>
+        {coords && (
+          <span className="inline-flex items-center gap-2 rounded-full bg-peacock-500/15 px-3 py-1 text-xs text-peacock-400">
+            Near you ({coords.lat.toFixed(3)}, {coords.lng.toFixed(3)})
+            <button onClick={clearLocation} className="text-white/60 hover:text-white" aria-label="Clear location and search by city">
+              ✕
+            </button>
+          </span>
+        )}
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-white/70" title="Exclude hotels/resorts whose event facilities aren't confirmed by the provider">
+          <input
+            type="checkbox"
+            checked={verifiedOnly}
+            onChange={(e) => setVerifiedOnly(e.target.checked)}
+            className="accent-saffron-500"
+          />
+          Verified event venues only
+        </label>
+      </div>
+      <p className="text-[11px] text-white/40">
+        Results are filtered to event venues (marriage halls, banquet halls, convention centres, event spaces). Restaurants,
+        shops and unrelated businesses are excluded. Hotels appear only as unverified unless the provider confirms event
+        facilities. HTTPS (or localhost) is required for GPS location.
+      </p>
 
       {/* Context: what is being searched */}
       <p className="text-xs text-white/50">
@@ -166,7 +264,7 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
       {/* Notice / source banner */}
       {result && !loading && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          {result.usedGoogle ? <LiveBadge /> : result.sampleOnly ? <SampleBadge /> : <CatalogBadge />}
+          {result.usedProvider ? <LiveBadge /> : result.sampleOnly ? <SampleBadge /> : <CatalogBadge />}
           <span className="text-white/60">{result.notice}</span>
         </div>
       )}
@@ -174,16 +272,16 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
       {/* Missing-key helper (only when it actually blocks live search) */}
       {result && result.keyMissing && !loading && (
         <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-white/60">
-          To enable live venue discovery (e.g. searching “Arunadu” on Google), add a server-side{" "}
-          <code className="rounded bg-black/40 px-1">GOOGLE_PLACES_API_KEY</code> in <code className="rounded bg-black/40 px-1">.env</code>{" "}
-          and restart. See the README → “Configuring Google Places”.
+          To enable live venue discovery (e.g. searching “Arunadu” nearby), add a server-side{" "}
+          <code className="rounded bg-black/40 px-1">GEOAPIFY_API_KEY</code> in <code className="rounded bg-black/40 px-1">.env</code>{" "}
+          and restart. See the README → “Configuring Geoapify Places”.
         </div>
       )}
 
-      {/* Google transient-error state */}
-      {result?.googleError && !loading && (
+      {/* Provider transient-error state */}
+      {result?.providerError && !loading && (
         <div className="rounded-lg border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-200/80">
-          Live Google search issue: {result.googleError}
+          Live venue search issue: {result.providerError}
         </div>
       )}
 
@@ -203,17 +301,52 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
           const isSelected = (plan.selectedVenue?.providerId || plan.selectedVenue?.id) === key;
           const hasVerifiedCapacity = v.capacityMin != null || v.capacityMax != null;
           const hasVerifiedPrice = v.priceMin != null || v.priceMax != null;
+          const photo = v.photos && v.photos.length > 0 ? v.photos[0] : null;
           return (
-            <div key={key} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div key={key} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+              {/* Venue photo when provided; otherwise an illustrative fallback
+                  (clearly labelled — never claimed to be the real venue). */}
+              <div className="relative aspect-[16/9] w-full bg-[#1c1033]">
+                <SmartImage
+                  src={photo}
+                  alt={photo ? `${v.name}` : `${v.name} — illustrative venue preview`}
+                  category="venue"
+                  sizes="(max-width:768px) 100vw, 50vw"
+                />
+                <span className="absolute right-2 top-2 z-10">{sourceBadge(v)}</span>
+              </div>
+              <div className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <h4 className="font-medium">{v.name}</h4>
                   {v.address && <p className="text-xs text-white/55">{v.address}</p>}
                 </div>
-                {sourceBadge(v)}
               </div>
 
+              {/* Event-suitability honesty label */}
+              {v.source === "geoapify" && (
+                <div className="mt-2">
+                  {v.eventClass === "event-venue" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-medium text-emerald-300">
+                      ✓ Event venue (provider category)
+                    </span>
+                  ) : v.eventClass === "hotel-possible" ? (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[11px] font-medium text-amber-300"
+                      title="Listed as a hotel/resort. Event facilities are not confirmed by the provider — contact the venue."
+                    >
+                      ⚠ Event facilities unverified
+                    </span>
+                  ) : null}
+                </div>
+              )}
+
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/70">
+                {v.distanceKm != null && (
+                  <span className="rounded-full bg-peacock-500/15 px-2 py-0.5 font-medium text-peacock-400">
+                    📍 {v.distanceKm} km away
+                  </span>
+                )}
                 {v.rating != null && (
                   <span>
                     ★ {v.rating} {v.reviewCount != null && <span className="text-white/40">({v.reviewCount})</span>}
@@ -267,7 +400,7 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
               <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                 {v.mapsUrl && (
                   <a href={v.mapsUrl} target="_blank" rel="noopener noreferrer" className="text-peacock-400 hover:underline">
-                    {v.source === "google" ? "Open in Google Maps ↗" : "Directions ↗"}
+                    {v.source === "geoapify" ? "View on map ↗" : "Directions ↗"}
                   </a>
                 )}
                 {v.website && (
@@ -303,6 +436,7 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
                   {isSelected ? "Selected ✓" : "Select for plan"}
                 </button>
               </div>
+              </div>
             </div>
           );
         })}
@@ -311,8 +445,9 @@ export function VenueDiscovery({ plan, onSaved }: { plan: Plan; onSaved: (p: Pla
       {/* Idle / empty state */}
       {!result && !loading && (
         <p className="text-sm text-white/50">
-          Search to discover venues in {plan.city}. With a Google Places key configured you&apos;ll see live Google results
-          alongside any authorized catalog records; otherwise you&apos;ll see clearly-labeled catalog or sample venues.
+          Search to discover venues in {plan.city}, or use your location for nearby results. With a Geoapify key configured
+          you&apos;ll see live results alongside any authorized catalog records; otherwise you&apos;ll see clearly-labeled
+          catalog or sample venues.
         </p>
       )}
     </div>

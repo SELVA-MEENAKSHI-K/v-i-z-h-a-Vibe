@@ -44,7 +44,7 @@ export default async function MyPlansPage() {
             </div>
             <h2 className="mt-4 font-display text-2xl font-semibold">No saved plans yet</h2>
             <p className="mt-2 max-w-md text-white/60">
-              You haven&apos;t created any event plans. Start one to pick a venue, design your 3D layout, and get AI-assisted
+              You haven&apos;t created any event plans. Start one to pick a venue, explore your 3D showcase, and get AI-assisted
               themes, menus, and budgets.
             </p>
             <Link

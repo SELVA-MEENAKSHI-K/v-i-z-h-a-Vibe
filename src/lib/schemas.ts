@@ -67,6 +67,10 @@ export const budgetSchema = z.object({
 export const venueSearchSchema = z.object({
   city: citySchema.optional(),
   query: z.string().trim().max(120).optional(),
+  // Real-time, location-based search (user's current GPS coordinates).
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  radiusKm: z.number().min(1).max(50).optional(),
 });
 
 // Admin-managed authorized catalog venue. Source + verification required so we
@@ -125,8 +129,96 @@ export const aiChatSchema = z.object({
     .optional(),
 });
 
+// ---- Authentication schemas ----
+export const registerSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(200),
+  phone: z.string().trim().max(20).optional().nullable(),
+  password: z.string().min(8).max(200),
+  confirmPassword: z.string().min(8).max(200),
+  acceptTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the terms." }) }),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().email().max(200),
+  password: z.string().min(1).max(200),
+  remember: z.boolean().optional(),
+});
+
+export const forgotPasswordSchema = z.object({ email: z.string().trim().email().max(200) });
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10).max(200),
+  password: z.string().min(8).max(200),
+});
+
+export const updateProfileSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  phone: z.string().trim().max(20).optional().nullable(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(8).max(200),
+});
+
+export const adminUserStatusSchema = z.object({ status: z.enum(["ACTIVE", "BLOCKED"]) });
+
+// ---- Vendor module ----
+export const vendorStatusEnum = z.enum(["ENQUIRED", "NEGOTIATING", "CONFIRMED", "CANCELLED"]);
+
+// Save a vendor to the plan (from discovery). vendorId may be a DB id or a
+// "sample:<category>:<n>" id (promoted to a catalog row server-side).
+export const saveVendorSchema = z.object({
+  vendorId: z.string().trim().min(1).max(120),
+  packageName: z.string().trim().max(120).optional().nullable(),
+  note: z.string().trim().max(2000).optional().nullable(),
+  enquiry: z.string().trim().max(2000).optional().nullable(),
+});
+
+// Update a saved vendor's workflow: status / favourite / note / agreed cost.
+export const updateVendorSchema = z
+  .object({
+    status: vendorStatusEnum.optional(),
+    favourite: z.boolean().optional(),
+    note: z.string().trim().max(2000).optional().nullable(),
+    packageName: z.string().trim().max(120).optional().nullable(),
+    // Agreed cost (INR) once confirmed — drives the budget.
+    agreedCost: z.number().int().min(0).max(1_000_000_000).optional().nullable(),
+    enquiry: z.string().trim().max(2000).optional().nullable(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
+
+// ---- Timeline module ----
+export const taskPriorityEnum = z.enum(["high", "medium", "low"]);
+export const taskStatusEnum = z.enum(["pending", "in-progress", "completed", "overdue"]);
+
+// Create / edit a single timeline task.
+export const timelineTaskSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  detail: z.string().trim().max(2000).optional().nullable(),
+  offsetDays: z.number().int().min(0).max(3650).optional(),
+  dueDate: z.string().datetime().optional().nullable(),
+  startDate: z.string().datetime().optional().nullable(),
+  priority: taskPriorityEnum.optional(),
+  status: taskStatusEnum.optional(),
+  assignee: z.string().trim().max(120).optional().nullable(),
+  vendorId: z.string().trim().max(120).optional().nullable(),
+  dependsOnId: z.string().trim().max(120).optional().nullable(),
+});
+
+// PATCH a task — all fields optional, plus a `done` toggle convenience.
+export const updateTimelineTaskSchema = timelineTaskSchema
+  .partial()
+  .extend({ done: z.boolean().optional() })
+  .refine((v) => Object.keys(v).length > 0, { message: "No fields to update." });
+
 export type CreatePlanInput = z.infer<typeof createPlanSchema>;
 export type LayoutInput = z.infer<typeof layoutSchema>;
 export type BudgetInput = z.infer<typeof budgetSchema>;
 export type AiRecommendationInput = z.infer<typeof aiRecommendationSchema>;
 export type AiChatInput = z.infer<typeof aiChatSchema>;
+export type SaveVendorInput = z.infer<typeof saveVendorSchema>;
+export type UpdateVendorInput = z.infer<typeof updateVendorSchema>;
+export type TimelineTaskInput = z.infer<typeof timelineTaskSchema>;
+export type UpdateTimelineTaskInput = z.infer<typeof updateTimelineTaskSchema>;

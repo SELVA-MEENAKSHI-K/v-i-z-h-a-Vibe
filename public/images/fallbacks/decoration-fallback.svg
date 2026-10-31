@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="Illustrative decoration preview">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#3a2b5c"/>
+      <stop offset="100%" stop-color="#1c1033"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#g)"/>
+  <path d="M120 130 Q320 250 520 130" fill="none" stroke="#ffd24c" stroke-width="4"/>
+  <circle cx="170" cy="160" r="14" fill="#ff5fa2"/>
+  <circle cx="240" cy="190" r="14" fill="#ffd24c"/>
+  <circle cx="320" cy="205" r="16" fill="#2dd4bf"/>
+  <circle cx="400" cy="190" r="14" fill="#ff9e2c"/>
+  <circle cx="470" cy="160" r="14" fill="#7c3aed"/>
+  <path d="M260 300 q60 -70 120 0 z" fill="#e23e57"/>
+  <path d="M320 300 v70" stroke="#ffd24c" stroke-width="4"/>
+  <text x="320" y="425" fill="#ffffff" fill-opacity="0.72" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Decor · Illustrative preview</text>
+</svg>

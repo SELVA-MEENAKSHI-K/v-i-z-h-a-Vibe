@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="Illustrative event preview">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="28%" r="82%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#15131f"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="480" fill="#1c1033"/>
+  <rect width="640" height="480" fill="url(#g)"/>
+  <circle cx="150" cy="120" r="5" fill="#ffd24c"/>
+  <circle cx="500" cy="100" r="5" fill="#2dd4bf"/>
+  <circle cx="560" cy="200" r="4" fill="#ff5fa2"/>
+  <circle cx="90" cy="220" r="4" fill="#ff9e2c"/>
+  <rect x="210" y="300" width="220" height="24" rx="6" fill="#e23e57"/>
+  <rect x="250" y="250" width="140" height="52" rx="8" fill="#f5820a"/>
+  <path d="M320 210 l10 26 h28 l-22 18 8 28 -24 -16 -24 16 8 -28 -22 -18 h28 z" fill="#ffd24c"/>
+  <text x="320" y="425" fill="#ffffff" fill-opacity="0.72" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Event · Illustrative preview</text>
+</svg>

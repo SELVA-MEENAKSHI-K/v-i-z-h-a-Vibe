@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="Illustrative shop preview">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#2d1b57"/>
+      <stop offset="100%" stop-color="#15131f"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#g)"/>
+  <rect x="170" y="190" width="300" height="170" rx="6" fill="#241a3a" stroke="#2dd4bf" stroke-width="3"/>
+  <path d="M160 190 h320 l-20 -46 h-280 z" fill="#14b8a6"/>
+  <path d="M160 144 h320 v0 M180 144 l0 46 M220 144 l0 46 M260 144 l0 46 M300 144 l0 46 M340 144 l0 46 M380 144 l0 46 M420 144 l0 46 M460 144 l0 46" stroke="#0d9488" stroke-width="3"/>
+  <rect x="285" y="270" width="70" height="90" rx="3" fill="#1c1033"/>
+  <circle cx="345" cy="315" r="4" fill="#ffd24c"/>
+  <text x="320" y="425" fill="#ffffff" fill-opacity="0.72" font-family="system-ui,sans-serif" font-size="26" font-weight="700" text-anchor="middle">Shop · Illustrative preview</text>
+</svg>

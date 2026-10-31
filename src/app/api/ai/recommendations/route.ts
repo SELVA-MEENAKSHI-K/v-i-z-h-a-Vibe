@@ -1,6 +1,6 @@
 import { ok, fail, handleError } from "@/lib/api";
 import { aiRecommendationSchema } from "@/lib/schemas";
-import { getAiProvider } from "@/lib/ai";
+import { getAiProvider, AI_NOT_CONFIGURED_MESSAGE } from "@/lib/ai";
 import type { AiContext } from "@/lib/ai";
 import { getServerConfig } from "@/lib/config";
 import { rateLimit, clientIp } from "@/lib/rateLimit";
@@ -16,6 +16,10 @@ export async function POST(req: Request) {
     const ip = clientIp(req.headers);
     const limit = rateLimit(`ai:${ip}`, config.rateLimitPerMinute);
     if (!limit.allowed) return fail("Too many requests. Please slow down.", 429);
+
+    // Require a configured live AI provider — never return fabricated demo data.
+    const provider = getAiProvider();
+    if (!provider) return fail(AI_NOT_CONFIGURED_MESSAGE, 503);
 
     const body = await req.json();
     const input = aiRecommendationSchema.parse(body);
@@ -46,7 +50,6 @@ export async function POST(req: Request) {
       };
     }
 
-    const provider = getAiProvider();
     const result = await provider.recommend(input.kind, ctx);
 
     // Persist recommendation metadata when tied to a plan (clearly generated).

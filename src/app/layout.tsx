@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./vibe.css";
+import { FestivalBackdrop } from "@/components/ui/FestivalBackdrop";
+import { CursorGlow } from "@/components/ui/CursorGlow";
 
 export const metadata: Metadata = {
   title: "VizhaVibe — Immersive event planning for Madurai, Chennai & Bangalore",
@@ -18,6 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Skip to content
         </a>
+        <FestivalBackdrop />
+        <CursorGlow />
         {children}
       </body>
     </html>

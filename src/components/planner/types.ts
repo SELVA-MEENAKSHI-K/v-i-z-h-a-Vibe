@@ -47,6 +47,9 @@ export type PlanVenue = {
   sourceUrl?: string | null;
   attribution: string | null;
   lastCheckedAt: string | null;
+  distanceKm?: number | null;
+  eventClass?: "event-venue" | "hotel-possible" | "other";
+  eventVerified?: boolean;
 };
 
 export type PlanBudgetItem = {
@@ -69,13 +72,65 @@ export type PlanMenu = {
   estimated: boolean;
 };
 
+export type TaskPriority = "high" | "medium" | "low";
+export type TaskStatus = "pending" | "in-progress" | "completed" | "overdue";
+
 export type PlanTask = {
   id: string;
   title: string;
   detail: string | null;
   offsetDays: number;
+  startDate: string | null;
   dueDate: string | null;
   done: boolean;
+  priority: TaskPriority;
+  status: TaskStatus;
+  assignee: string | null;
+  vendorId: string | null;
+  dependsOnId: string | null;
+};
+
+export type VendorPackage = {
+  name: string;
+  priceMin: number;
+  priceMax: number;
+  unit: string;
+  includes: string[];
+};
+
+export type PlanVendorInfo = {
+  id: string;
+  source: string;
+  isSample: boolean;
+  verified: boolean;
+  name: string;
+  category: string;
+  city: string | null;
+  area: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  photos: string[];
+  rating: number | null;
+  reviewCount: number | null;
+  packages: VendorPackage[];
+  sourceName: string | null;
+  sourceUrl: string | null;
+};
+
+export type VendorStatus = "ENQUIRED" | "NEGOTIATING" | "CONFIRMED" | "CANCELLED";
+
+export type PlanSavedVendor = {
+  id: string;
+  vendorId: string;
+  status: VendorStatus;
+  favourite: boolean;
+  note: string | null;
+  packageName: string | null;
+  agreedCost: number | null;
+  enquiry: string | null;
+  vendor: PlanVendorInfo | null;
 };
 
 export type Plan = {
@@ -97,6 +152,7 @@ export type Plan = {
   budgetItems: PlanBudgetItem[];
   menus: PlanMenu[];
   tasks: PlanTask[];
+  savedVendors: PlanSavedVendor[];
   recommendations: { id: string; kind: string; provider: string; payload: unknown; isGenerated: boolean; createdAt: string }[];
   createdAt: string;
   updatedAt: string;

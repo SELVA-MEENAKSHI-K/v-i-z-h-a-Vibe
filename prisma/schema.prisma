@@ -55,9 +55,60 @@ model User {
   email     String?     @unique
   name      String?
   isDemo    Boolean     @default(false)
+  // --- Authentication (added; all optional so existing rows are unaffected) ---
+  phone        String?
+  passwordHash String? // scrypt hash "salt:hash" — never a plain password.
+  // "USER" | "ADMIN". Browser-supplied roles are never trusted.
+  role         String  @default("USER")
+  // "ACTIVE" | "BLOCKED".
+  status       String  @default("ACTIVE")
+
   plans     EventPlan[]
+  sessions  Session[]
+  resetTokens PasswordResetToken[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+
+  @@index([role])
+  @@index([status])
+}
+
+// Server-side sessions. The cookie holds the session id + an HMAC signature;
+// the row is the source of truth and can be revoked.
+model Session {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Single-use, time-limited password reset tokens (we store only a hash).
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Audit log for sensitive admin actions.
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String? // admin user id
+  action    String // e.g. "user.block"
+  targetId  String? // affected user id
+  detail    String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +145,7 @@ model EventPlan {
   budgetItems BudgetItem[]
   menus       Menu[]
   tasks       TimelineTask[]
+  savedVendors SavedVendor[]
   recommendations AiRecommendation[]
 
   createdAt   DateTime @default(now())
@@ -318,10 +370,94 @@ model TimelineTask {
   offsetDays Int     @default(0) // days before event
   done      Boolean  @default(false)
   sortOrder Int      @default(0)
+  // --- Richer scheduling (all additive/optional; existing rows unaffected) ---
+  startDate DateTime?
+  // "high" | "medium" | "low"
+  priority  String   @default("medium")
+  // "pending" | "in-progress" | "completed" | "overdue"
+  status    String   @default("pending")
+  // Who owns the task (free text, e.g. "Host", "Decorator").
+  assignee  String?
+  // Optional link to a saved vendor this task relates to.
+  vendor    SavedVendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  vendorId  String?
+  // Optional dependency: the id of a task that should finish first.
+  dependsOnId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([planId])
+  @@index([vendorId])
+}
+
+// ---------------------------------------------------------------------------
+// Vendors — catalog of service providers (photography, catering, decor, …).
+//
+// Honesty policy (mirrors Venue/CatalogVenue): we only present ratings, prices
+// and packages that come with the record's own source. `isSample` marks demo
+// catalog data; `verification` marks whether the facts are source-verified.
+// We never invent availability or reviews at runtime.
+// ---------------------------------------------------------------------------
+
+model Vendor {
+  id           String  @id @default(cuid())
+  name         String
+  // One of the eight supported categories (slug), e.g. "photography".
+  category     String
+  city         String
+  area         String?
+  address      String?
+  phone        String?
+  email        String?
+  website      String?
+  // JSON array of local/real photo URLs (never toy illustrations).
+  photos       String?
+  // Verified rating only; null => "No verified rating".
+  rating       Float?
+  reviewCount  Int?
+  // JSON array of packages: [{ name, priceMin, priceMax, unit, includes[] }].
+  packages     String?
+  // Provenance.
+  source       String  @default("sample") // "sample" | "catalog" | "manual"
+  sourceName   String?
+  sourceUrl    String?
+  // "verified" | "unverified"
+  verification String  @default("unverified")
+  isSample     Boolean @default(true)
+  published    Boolean @default(true)
+
+  savedVendors SavedVendor[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([city])
+}
+
+// A vendor saved to a specific plan, with the user's workflow + agreed cost.
+model SavedVendor {
+  id         String    @id @default(cuid())
+  plan       EventPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId     String
+  vendor     Vendor    @relation(fields: [vendorId], references: [id])
+  vendorId   String
+  // "ENQUIRED" | "NEGOTIATING" | "CONFIRMED" | "CANCELLED"
+  status     String    @default("ENQUIRED")
+  favourite  Boolean   @default(false)
+  note       String?
+  // The package the user is considering / confirmed.
+  packageName String?
+  // Agreed cost in INR once CONFIRMED (drives the budget). Null until agreed.
+  agreedCost Int?
+  // Enquiry message the user sent (contact feature).
+  enquiry    String?
+  tasks      TimelineTask[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([planId, vendorId])
+  @@index([planId])
+  @@index([vendorId])
 }
 
 // ---------------------------------------------------------------------------

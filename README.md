@@ -11,7 +11,7 @@ A **3D-first, immersive event-planning platform** for events in **Madurai, Chenn
 - **3D venue explorer** (React Three Fiber + Three.js): orbit/pan/zoom, preset camera views (reset, top, stage, entrance), drag-to-reposition tables/stage/decor, guest-count-aware auto-fill, and a live "seats placed vs guest count" readout.
 - **Accessible 2D plan** alternative (SVG, keyboard-focusable) and an automatic fallback for devices without WebGL.
 - **Guided setup flow**: category → event type → city/date/guests/budget → style & dietary preferences.
-- **Venue discovery** via **Google Places (New)**, server-mediated, with attribution and explicit "unverified" tags on capacity/pricing/availability. Falls back to **clearly-labeled sample venues** when no key is set.
+- **Venue discovery** via **Geoapify Places API**, server-mediated, with real-time GPS "near me" search, a 5/10/25/50 km radius, nearest-first sorting, attribution, and explicit "unverified" tags on capacity/pricing/availability. Falls back to **clearly-labeled sample venues** when no key is set.
 - **AI planning tools**: themes, decor concepts, regional menus, itemized budget ranges, and a timeline — plus a **context-aware chatbot**. Uses a provider abstraction; defaults to a **deterministic demo mode** when no AI key is configured.
 - **8 categories, 40 event types** (exceeds the 30+ requirement), all **data-driven** from one catalog module.
 - **Plan summary** with location, date, guests, estimated cost range, selected venue, and outstanding tasks. Every plan has a shareable link.
@@ -28,7 +28,7 @@ A **3D-first, immersive event-planning platform** for events in **Madurai, Chenn
 | Database | **Prisma + SQLite (default)** | Zero-config demo. Swap to **PostgreSQL** by changing one line (see below). |
 | Validation | **Zod** | Shared request/response schemas for every endpoint. |
 | AI | **Provider abstraction** (`demo` / `openai`) | Core logic never binds to one vendor; server-side calls only. |
-| Venues | **Server-mediated Google Places** | Keeps the key off the client; applies field masks and caching. |
+| Venues | **Server-mediated Geoapify Places** | Keeps the key off the client; circle filter + proximity bias; caching. |
 
 Design decisions:
 
@@ -82,29 +82,29 @@ npm start
 
 ---
 
-## Configuring Google Places (live venues)
+## Configuring Geoapify Places (live venues)
 
-1. Open the [Google Cloud Console](https://console.cloud.google.com/) and create (or select) a project.
-2. **Enable billing** on the project (Places API requires an active billing account).
-3. Under **APIs & Services → Library**, enable **Places API (New)**. (The legacy "Places API" is a different product; this app uses the New Text Search endpoint `places:searchText`.)
-4. Under **APIs & Services → Credentials**, create an **API key**.
-5. **Restrict the key**:
-   - *API restriction*: allow only **Places API (New)**.
-   - *Application restriction*: because this key is used server-side, prefer an **IP restriction** for your server, or leave unrestricted only in local dev. Do **not** ship it to the browser.
-6. Put the key in `.env`: `GOOGLE_PLACES_API_KEY="your-key"` and restart `npm run dev`.
-7. (Optional) For client-side map embeds/links, set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` and restrict that key by **HTTP referrer**.
+1. Register at the [Geoapify MyProjects dashboard](https://myprojects.geoapify.com) — it's free and needs no credit card.
+2. Create a **new project**. An **API key** is generated automatically (you can add more under the API Keys section).
+3. (Optional but recommended) Restrict the key by **allowed IP addresses / HTTP referrers / origins** in the dashboard.
+4. Put the key in `.env`: `GEOAPIFY_API_KEY="your-key"` and restart `npm run dev`.
+
+The key is read **only on the server** (in `src/lib/venues.ts` via `getServerConfig()`), passed to Geoapify's endpoint server-side, and never sent to the browser or included in any API response. The free tier allows up to **3000 requests/day**.
 
 **How search behaves once the key is set:**
 
-- Searching `mahal`, `wedding hall`, `marriage hall`, `banquet hall`, or `party hall` enriches the query with venue-intent keywords and biases results to the selected city (Madurai/Chennai/Bangalore) via a 25 km location bias.
-- Searching a specific name like **`Arunadu`** sends that exact term + city to Google Text Search and shows whatever Google returns — no seeded sample record is required.
-- Results are labeled **Live (Google)**. Authorized catalog records (if any) appear alongside, labeled **Verified catalog** / **Not verified**. Sample data only appears when there is no key *and* no catalog record, and is always labeled **Sample data — not live**. The three sources are never silently mixed.
+- The backend calls Geoapify's Places endpoint `GET https://api.geoapify.com/v2/places` with event-venue `categories` (hotels, catering, leisure, culture, commercial), a `filter=circle:lon,lat,radius` constraint and a `proximity` bias centered on the user's location or the selected city.
+- **"Use my location"** passes the browser's GPS coordinates; the **5/10/25/50 km radius** selector sets the circle radius. Results get a haversine **distance** and are sorted **nearest-first**.
+- Searching a specific name like **`Arunadu`** is sent as Geoapify's `name` parameter within the search area.
+- Typed-city search falls back to fixed center points for **Madurai, Chennai, Bangalore**.
+- Results are labeled **Live**. Authorized catalog records (if any) appear alongside, labeled **Verified catalog** / **Not verified**. Sample data only appears when there is no key *and* no catalog record, and is always labeled **Sample data — not live**. The three sources are never silently mixed.
+- If the key is missing or Geoapify returns an error, the UI shows a clear message and **never fabricates** live results.
 
 ### Data sources at a glance
 
 | Label | Source | What it means | Persisted? |
 |---|---|---|---|
-| **Live (Google)** | Google Places API (New) | Fetched live per search; attribution shown. | Only the **Place ID** + your app data (notes, selection, layout). Google fields are not stored as durable facts. |
+| **Live** | Geoapify Places API (OpenStreetMap data) | Fetched live per search; attribution shown. | Only the **provider place ID** + your app data (notes, selection, layout). Live fields are not stored as durable facts. |
 | **Verified catalog** | `CatalogVenue` (admin-managed) | Facts from an authorized source with a `sourceUrl` + verification date. Capacity/price shown. | Yes — we are authorized to store these. |
 | **Catalog · Not verified** | `CatalogVenue` | Record exists but facts aren't source-confirmed. Capacity/price hidden → "Contact venue to confirm." | Yes, but shown as unverified. |
 | **Sample data — not live** | `sampleVenues.ts` | Fictional placeholders for the no-credential demo. | In-memory / demo seed only. |
@@ -160,9 +160,9 @@ The header shows a live **configuration status**: whether Places and AI are live
 
 ## Venue attribution & data caveats
 
-- Live venue data comes from **Google Maps Platform (Places API New)** and is subject to Google's terms. We request a minimal field mask, bias results to the city, and cache for `PLACES_CACHE_HOURS` (default 24h) within Google's allowed window.
-- **We store only the Google Place ID** plus our own app data (user notes, selected venue, editable 3D layout). We do **not** scrape Google Maps or copy Google-returned names/addresses/ratings/photos into the database as durable facts; those are shown live and re-fetched when needed.
-- **Capacity, pricing, availability, included services, and booking terms are treated as unverified** for Google and unverified-catalog records, tagged in the UI, and shown as **"Contact venue to confirm."** when unknown.
+- Live venue data comes from the **Geoapify Places API** (data © OpenStreetMap contributors) and is subject to Geoapify's and OSM's terms. We cache for `PLACES_CACHE_HOURS` (default 24h).
+- **We store only the provider place ID** plus our own app data (user notes, selected venue, editable 3D layout). We do **not** copy live provider names/addresses into the database as durable facts; those are shown live and re-fetched when needed.
+- **Capacity, pricing, availability, included services, and booking terms are treated as unverified** for live and unverified-catalog records, tagged in the UI, and shown as **"Contact venue to confirm."** when unknown.
 - Persistent venue facts live **only** in `CatalogVenue`, added from an **authorized source** with `sourceName` + `sourceUrl` + verification date. Unverified fields are marked "Not verified".
 - We **never invent** a venue, rating, review, phone number, capacity, price, service, or availability. Missing fields render as empty/unknown, not fabricated.
 - Sample venues are fictional placeholders, labeled **"Sample data — not live"** on every card, and never shown as if they were live.
@@ -171,7 +171,7 @@ The header shows a live **configuration status**: whether Places and AI are live
 
 ### Were real Madurai venues verified and added?
 
-**No.** This update ships the catalog model, admin/seed workflow, and live Google search — but it does **not** include real, source-verified Madurai mahal records. Gathering them requires confirming each venue's data against an authorized source (venue-submitted info or terms that permit storage), which was not done here, and fabricating records is not allowed. The seed contains one unpublished `pending` **template** only. To get real Madurai results today, **add a `GOOGLE_PLACES_API_KEY`** (live search works immediately, including names like "Arunadu"), and/or add authorized records via the admin endpoint.
+**No.** This update ships the catalog model, admin/seed workflow, and live Geoapify search — but it does **not** include real, source-verified Madurai mahal records. Gathering them requires confirming each venue's data against an authorized source (venue-submitted info or terms that permit storage), which was not done here, and fabricating records is not allowed. The seed contains one unpublished `pending` **template** only. To get real Madurai results today, **add a `GEOAPIFY_API_KEY`** (live search works immediately, including names like "Arunadu"), and/or add authorized records via the admin endpoint.
 
 ---
 
@@ -183,7 +183,7 @@ All responses use a `{ ok, data }` / `{ ok:false, error }` envelope. Inputs/outp
 |---|---|---|
 | GET | `/api/health` | Service status + integration (Places/AI) status. |
 | GET | `/api/event-categories` | Categories and event types. |
-| GET | `/api/venues/search?city=&query=&venueType=` | Venue search: live Google + authorized catalog, or sample. Rate-limited. |
+| GET | `/api/venues/search?city=&query=&venueType=&lat=&lng=&radiusKm=` | Venue search: live Geoapify (city or GPS `lat`/`lng` + `radiusKm`) + authorized catalog, or sample. Rate-limited. |
 | GET | `/api/venues/:id` | Venue details (DB id, providerId, or `sample:*`). |
 | GET | `/api/admin/catalog-venues?city=` | List published authorized catalog records (public read). |
 | POST | `/api/admin/catalog-venues` | Create/update an authorized catalog record (requires `x-admin-token`). |
@@ -200,7 +200,7 @@ All responses use a `{ ok, data }` / `{ ok:false, error }` envelope. Inputs/outp
 
 ## Security & privacy
 
-- API keys (`GOOGLE_PLACES_API_KEY`, `OPENAI_API_KEY`) are read **server-side only**; only `NEXT_PUBLIC_*` values reach the browser.
+- API keys (`GEOAPIFY_API_KEY`, `OPENAI_API_KEY`) are read **server-side only**; only `NEXT_PUBLIC_*` values reach the browser.
 - All endpoints validate input with Zod; AI and search endpoints apply per-IP **rate limiting** (`RATE_LIMIT_PER_MINUTE`).
 - Plan edits validate that a selected venue actually belongs to the plan.
 - Errors return safe messages; details are logged server-side only.
@@ -231,7 +231,7 @@ Covered by `tests/`:
 - **"Plan not found" on `/plan/...`** — run `npm run db:setup` to create and seed the database.
 - **Prisma client errors** — run `npm run prisma:generate` (the `build` script does this automatically).
 - **3D scene blank / "not supported"** — your device/browser may lack WebGL; the app auto-switches to the 2D plan.
-- **Live venues not showing** — confirm `GOOGLE_PLACES_API_KEY` is set and the Places API (New) is enabled with billing.
+- **Live venues not showing** — confirm `GEOAPIFY_API_KEY` is set in `.env` and you've restarted the server. Check the Geoapify dashboard for remaining daily quota.
 - **Switching to Postgres** — remember to change the Prisma `provider` and re-run migrations.
 
 ---

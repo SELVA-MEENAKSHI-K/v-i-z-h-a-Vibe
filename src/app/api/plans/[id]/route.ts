@@ -2,15 +2,20 @@ import { ok, fail, handleError } from "@/lib/api";
 import { prisma } from "@/lib/db";
 import { updatePlanSchema } from "@/lib/schemas";
 import { serializePlan, getPlanByIdOrToken } from "@/lib/plans";
+import { assertCanAccessPlan, AuthError } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
+    const existing = await getPlanByIdOrToken(params.id);
+    if (!existing) return fail("Plan not found.", 404);
+    await assertCanAccessPlan(existing.ownerId); // IDOR guard
     const plan = await serializePlan(params.id);
     if (!plan) return fail("Plan not found.", 404);
     return ok(plan);
   } catch (err) {
+    if (err instanceof AuthError) return fail(err.message, err.status);
     return handleError(err);
   }
 }
@@ -19,6 +24,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   try {
     const existing = await getPlanByIdOrToken(params.id);
     if (!existing) return fail("Plan not found.", 404);
+    await assertCanAccessPlan(existing.ownerId); // IDOR guard
 
     const body = await req.json();
     const input = updatePlanSchema.parse(body);
@@ -58,6 +64,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const serialized = await serializePlan(existing.id);
     return ok(serialized);
   } catch (err) {
+    if (err instanceof AuthError) return fail(err.message, err.status);
     return handleError(err);
   }
 }

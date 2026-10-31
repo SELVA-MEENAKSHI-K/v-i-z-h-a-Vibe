@@ -8,10 +8,10 @@ export default function NewPlanPage() {
   return (
     <>
       <Header />
-      <main id="main" className="mx-auto max-w-4xl px-4 py-10">
+      <main id="main" className="mx-auto max-w-6xl px-4 py-10">
         <h1 className="font-display text-3xl font-semibold">Set up your event</h1>
         <p className="mt-2 text-white/70">
-          A few details shape your venue search, 3D layout, and AI suggestions. You can change everything later.
+          A few details shape your venue search, 3D showcase, and AI suggestions. You can change everything later.
         </p>
         <div className="mt-8">
           <SetupWizard

@@ -1,12 +1,9 @@
-// OpenAI-compatible provider. Only used when AI_PROVIDER != "demo" and a key is
-// configured. Falls back to the demo provider's structured shapes if the model
-// returns unparseable JSON, so the product never breaks.
+// OpenAI-compatible provider. Only used when AI_PROVIDER = "openai" and a key
+// is configured. There is NO demo fallback: if the model call fails, the error
+// propagates so the API can return a clear message (we never fabricate data).
 
 import { getServerConfig } from "../config";
-import { DemoAiProvider } from "./demoProvider";
 import type { AiContext, AiProvider, AiResult } from "./types";
-
-const demo = new DemoAiProvider();
 
 function systemPrompt(): string {
   return [
@@ -16,6 +13,40 @@ function systemPrompt(): string {
     "Always present costs as indicative ranges with assumptions, never as quotes.",
     "Be concise and practical.",
   ].join(" ");
+}
+
+// JSON shape guides per recommendation kind (so the model returns our structure).
+function schemaGuide(kind: AiResult["kind"]): object {
+  switch (kind) {
+    case "theme":
+      return {
+        themes: [
+          { title: "string", palette: ["#hex"], summary: "string", decorHighlights: ["string"], representableIn3D: ["string"] },
+        ],
+      };
+    case "decor":
+      return {
+        concepts: [{ title: "string", description: "string", representableIn3D: ["string"], notRepresentable: ["string"] }],
+      };
+    case "menu":
+      return {
+        menus: [{ style: "string", dietary: "veg|non-veg|both", courses: [{ course: "string", items: ["string"] }], notes: "string" }],
+      };
+    case "budget":
+      return {
+        estimate: {
+          currency: "INR",
+          lines: [{ category: "string", label: "string", quantity: 1, unitCostMin: 0, unitCostMax: 0, assumption: "string" }],
+          totalMin: 0,
+          totalMax: 0,
+          assumptions: ["string"],
+        },
+      };
+    case "timeline":
+      return { tasks: [{ title: "string", detail: "string", offsetDays: 0 }] };
+    default:
+      return {};
+  }
 }
 
 async function callModel(messages: { role: string; content: string }[], jsonMode: boolean): Promise<string> {
@@ -35,7 +66,7 @@ async function callModel(messages: { role: string; content: string }[], jsonMode
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    throw new Error(`OpenAI error ${res.status}: ${detail.slice(0, 200)}`);
+    throw new Error(`AI provider error ${res.status}: ${detail.slice(0, 200)}`);
   }
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   return json.choices?.[0]?.message?.content ?? "";
@@ -45,47 +76,34 @@ export class OpenAiProvider implements AiProvider {
   name = "openai";
 
   async recommend(kind: AiResult["kind"], ctx: AiContext): Promise<AiResult> {
-    // Ask the model to fill the exact JSON shape; validate by reusing the demo
-    // shape as a schema guide. On any failure, degrade gracefully to demo.
-    try {
-      const guide = await demo.recommend(kind, ctx);
-      const content = await callModel(
-        [
-          { role: "system", content: systemPrompt() },
-          {
-            role: "user",
-            content:
-              `Context: ${JSON.stringify(ctx)}.\n` +
-              `Return ONLY JSON matching this exact structure (same keys, same types), tailored to the context:\n` +
-              JSON.stringify(guide),
-          },
-        ],
-        true,
-      );
-      const parsed = JSON.parse(content) as AiResult;
-      // Force correct provenance regardless of model output.
-      return { ...parsed, kind, provider: this.name, generated: true } as AiResult;
-    } catch (err) {
-      console.error("[ai] openai recommend failed, using demo fallback:", err);
-      const fallback = await demo.recommend(kind, ctx);
-      return { ...fallback, provider: `demo-fallback` } as AiResult;
-    }
+    const content = await callModel(
+      [
+        { role: "system", content: systemPrompt() },
+        {
+          role: "user",
+          content:
+            `Context: ${JSON.stringify(ctx)}.\n` +
+            `Return ONLY JSON matching this exact structure (same keys, same types), tailored to the context:\n` +
+            JSON.stringify(schemaGuide(kind)),
+        },
+      ],
+      true,
+    );
+    const parsed = JSON.parse(content) as AiResult;
+    // Force correct provenance regardless of model output.
+    return { ...parsed, kind, provider: this.name, generated: true } as AiResult;
   }
 
   async chat(message: string, ctx: AiContext, history?: { role: "user" | "assistant"; content: string }[]): Promise<string> {
-    try {
-      const content = await callModel(
-        [
-          { role: "system", content: systemPrompt() + ` Current plan context: ${JSON.stringify(ctx)}.` },
-          ...(history ?? []),
-          { role: "user", content: message },
-        ],
-        false,
-      );
-      return content || (await demo.chat(message, ctx));
-    } catch (err) {
-      console.error("[ai] openai chat failed, using demo fallback:", err);
-      return await demo.chat(message, ctx);
-    }
+    const content = await callModel(
+      [
+        { role: "system", content: systemPrompt() + ` Current plan context: ${JSON.stringify(ctx)}.` },
+        ...(history ?? []),
+        { role: "user", content: message },
+      ],
+      false,
+    );
+    if (!content) throw new Error("AI provider returned an empty response.");
+    return content;
   }
 }

@@ -1,17 +1,32 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfigStatus } from "./ConfigStatus";
-
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/plan/new", label: "Start planning" },
-  { href: "/plans", label: "My Plans" },
-];
+import { useAuth } from "@/lib/useAuth";
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const { user, isAdmin, logout } = useAuth();
+  const router = useRouter();
+
+  // Auth-aware nav. Admin link only shows for admins (and is enforced server-side).
+  const links: { href: string; label: string }[] = [
+    { href: "/", label: "Home" },
+    { href: "/plan/new", label: "Start planning" },
+  ];
+  if (user) {
+    links.push({ href: "/plans", label: "My Plans" }, { href: "/profile", label: "My Profile" });
+    if (isAdmin) links.push({ href: "/admin", label: "Admin" });
+  }
+
+  async function handleLogout() {
+    await logout();
+    setOpen(false);
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 vv-glass">
@@ -27,14 +42,28 @@ export function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-6 text-sm text-white/80 md:flex" aria-label="Primary">
-          {NAV_LINKS.map((l) => (
+          {links.map((l) => (
             <Link key={l.href} href={l.href} className="hover:text-white">
               {l.label}
             </Link>
           ))}
+          {user ? (
+            <button onClick={handleLogout} className="rounded-lg border border-white/15 px-3 py-1 text-sm hover:bg-white/5">
+              Logout
+            </button>
+          ) : (
+            <>
+              <Link href="/login" className="hover:text-white">
+                Login
+              </Link>
+              <Link href="/signup" className="rounded-lg bg-saffron-500 px-3 py-1 font-semibold text-ink-900 hover:bg-saffron-400">
+                Sign Up
+              </Link>
+            </>
+          )}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden xl:block">
           <ConfigStatus />
         </div>
 
@@ -55,7 +84,7 @@ export function Header() {
       {open && (
         <nav id="mobile-nav" aria-label="Primary" className="border-t border-white/10 px-4 py-2 md:hidden">
           <ul className="flex flex-col">
-            {NAV_LINKS.map((l) => (
+            {links.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
@@ -66,6 +95,22 @@ export function Header() {
                 </Link>
               </li>
             ))}
+            <li>
+              {user ? (
+                <button onClick={handleLogout} className="block w-full rounded-lg px-2 py-2.5 text-left text-sm text-red-200 hover:bg-white/5">
+                  Logout
+                </button>
+              ) : (
+                <>
+                  <Link href="/login" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2.5 text-sm text-white/85 hover:bg-white/5">
+                    Login
+                  </Link>
+                  <Link href="/signup" onClick={() => setOpen(false)} className="block rounded-lg px-2 py-2.5 text-sm text-saffron-400 hover:bg-white/5">
+                    Sign Up
+                  </Link>
+                </>
+              )}
+            </li>
           </ul>
           <div className="px-2 py-2">
             <ConfigStatus />

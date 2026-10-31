@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Persist a venue (from search) and attach it to the plan's shortlist.
 const saveVenueSchema = z.object({
   providerId: z.string().min(1),
-  source: z.enum(["google", "sample"]),
+  source: z.enum(["geoapify", "catalog", "sample"]),
   name: z.string().min(1),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),

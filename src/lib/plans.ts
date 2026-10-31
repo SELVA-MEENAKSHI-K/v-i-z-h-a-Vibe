@@ -3,6 +3,7 @@
 
 import { prisma } from "./db";
 import { findEventType } from "@/data/catalog";
+import { normalizeVendorRow } from "./vendors";
 import type { CreatePlanInput } from "./schemas";
 
 function parseJson<T>(s: string | null | undefined, fallback: T): T {
@@ -22,11 +23,12 @@ export async function ensureDemoUser() {
   });
 }
 
-export async function createPlan(input: CreatePlanInput) {
+// Create a plan owned by the given user (or the demo user when logged out).
+export async function createPlan(input: CreatePlanInput, ownerId?: string) {
   const eventType = await prisma.eventType.findUnique({ where: { slug: input.eventTypeSlug } });
   if (!eventType) throw new Error("Unknown event type.");
 
-  const owner = await ensureDemoUser();
+  const resolvedOwnerId = ownerId ?? (await ensureDemoUser()).id;
 
   const plan = await prisma.eventPlan.create({
     data: {
@@ -40,17 +42,27 @@ export async function createPlan(input: CreatePlanInput) {
       styles: input.styles?.join(",") ?? null,
       preferences: input.preferences ? JSON.stringify(input.preferences) : null,
       notes: input.notes ?? null,
-      ownerId: owner.id,
+      ownerId: resolvedOwnerId,
     },
   });
   return plan;
 }
 
-// Lightweight list of the demo user's saved plans for the "My Plans" page.
-export async function listPlans() {
-  const owner = await ensureDemoUser();
+// Confirm a plan belongs to the given owner (IDOR protection). Returns the
+// plan's ownerId so callers can compare, or null if the plan doesn't exist.
+export async function planOwnerId(idOrToken: string): Promise<string | null> {
+  const p = await prisma.eventPlan.findFirst({
+    where: { OR: [{ id: idOrToken }, { shareToken: idOrToken }] },
+    select: { ownerId: true },
+  });
+  return p ? p.ownerId : null;
+}
+
+// Lightweight list of a user's saved plans for the "My Plans" page.
+export async function listPlans(ownerId?: string) {
+  const resolvedOwnerId = ownerId ?? (await ensureDemoUser()).id;
   const plans = await prisma.eventPlan.findMany({
-    where: { ownerId: owner.id },
+    where: { ownerId: resolvedOwnerId },
     orderBy: { updatedAt: "desc" },
     include: {
       eventType: { include: { category: true } },
@@ -86,7 +98,8 @@ export async function getPlanByIdOrToken(idOrToken: string) {
       layout: { include: { objects: true } },
       budgetItems: { orderBy: { sortOrder: "asc" } },
       menus: true,
-      tasks: { orderBy: { offsetDays: "desc" } },
+      tasks: { orderBy: [{ sortOrder: "asc" }, { offsetDays: "desc" }] },
+      savedVendors: { include: { vendor: true }, orderBy: { createdAt: "asc" } },
       recommendations: { orderBy: { createdAt: "desc" }, take: 20 },
     },
   });
@@ -206,8 +219,25 @@ export async function serializePlan(idOrToken: string) {
       title: t.title,
       detail: t.detail,
       offsetDays: t.offsetDays,
+      startDate: t.startDate?.toISOString() ?? null,
       dueDate: t.dueDate?.toISOString() ?? null,
       done: t.done,
+      priority: t.priority,
+      status: t.status,
+      assignee: t.assignee,
+      vendorId: t.vendorId,
+      dependsOnId: t.dependsOnId,
+    })),
+    savedVendors: plan.savedVendors.map((s) => ({
+      id: s.id,
+      vendorId: s.vendorId,
+      status: s.status,
+      favourite: s.favourite,
+      note: s.note,
+      packageName: s.packageName,
+      agreedCost: s.agreedCost,
+      enquiry: s.enquiry,
+      vendor: s.vendor ? normalizeVendorRow(s.vendor) : null,
     })),
     recommendations: plan.recommendations.map((r) => ({
       id: r.id,

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480" viewBox="0 0 640 480" role="img" aria-label="Illustrative 3D preview">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#2d1b57"/>
+      <stop offset="100%" stop-color="#0b0a14"/>
+    </radialGradient>
+  </defs>
+  <rect width="640" height="480" fill="url(#g)"/>
+  <!-- isometric floor -->
+  <path d="M320 180 L520 300 L320 420 L120 300 Z" fill="#241a3a" stroke="#4a4668" stroke-width="2"/>
+  <!-- stage block -->
+  <path d="M250 250 L390 250 L390 230 L250 230 Z" fill="#e23e57"/>
+  <path d="M250 250 L250 270 L390 270 L390 250 Z" fill="#c81d4e"/>
+  <!-- round tables -->
+  <ellipse cx="260" cy="320" rx="22" ry="11" fill="#ffd24c"/>
+  <ellipse cx="330" cy="345" rx="22" ry="11" fill="#ffd24c"/>
+  <ellipse cx="400" cy="320" rx="22" ry="11" fill="#ffd24c"/>
+  <text x="320" y="455" fill="#ffffff" fill-opacity="0.72" font-family="system-ui,sans-serif" font-size="24" font-weight="700" text-anchor="middle">3D preview · Illustrative</text>
+</svg>

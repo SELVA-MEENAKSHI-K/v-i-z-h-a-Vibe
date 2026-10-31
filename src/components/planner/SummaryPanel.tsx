@@ -71,6 +71,19 @@ export function SummaryPanel({ plan }: { plan: Plan }) {
         )}
       </div>
 
+      {/* Applied theme */}
+      {typeof plan.preferences?.["selectedThemeName"] === "string" && (
+        <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div>
+            <div className="text-sm font-medium">Event theme</div>
+            <div className="text-sm text-saffron-400">{String(plan.preferences["selectedThemeName"])}</div>
+          </div>
+          {typeof plan.preferences?.["themeStageColor"] === "string" && (
+            <span className="h-7 w-7 rounded-lg ring-1 ring-white/20" style={{ background: String(plan.preferences["themeStageColor"]) }} />
+          )}
+        </div>
+      )}
+
       {/* Outstanding tasks */}
       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
         <span className="text-sm font-medium">Outstanding</span>

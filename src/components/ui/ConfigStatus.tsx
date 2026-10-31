@@ -5,7 +5,7 @@ import { apiGet } from "@/lib/client";
 
 type Health = {
   status: string;
-  integrations: { places: { live: boolean }; ai: { live: boolean } };
+  integrations: { places: { live: boolean; provider: string }; ai: { live: boolean; provider: string } };
 };
 
 // Small status strip showing whether live Places / AI are configured.
@@ -22,15 +22,20 @@ export function ConfigStatus() {
   if (!show || !health) return null;
 
   const places = health.integrations.places.live;
-  const ai = health.integrations.ai.live;
+  const aiLive = health.integrations.ai.live;
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-white/70" role="status" aria-live="polite">
       <Dot ok={places} />
-      <span>Venues: {places ? "Live (Google Places)" : "Sample data"}</span>
-      <span className="text-white/20">·</span>
-      <Dot ok={ai} />
-      <span>AI: {ai ? "Live provider" : "Demo mode"}</span>
+      <span>Venues: {places ? "Live (Geoapify)" : "Sample data"}</span>
+      {/* AI status only appears when a live provider is configured — no demo-mode badge. */}
+      {aiLive && (
+        <>
+          <span className="text-white/20">·</span>
+          <Dot ok={true} />
+          <span>AI: Live</span>
+        </>
+      )}
     </div>
   );
 }

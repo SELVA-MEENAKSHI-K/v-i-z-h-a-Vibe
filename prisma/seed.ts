@@ -2,10 +2,39 @@
 // 3D layout, budget, menu, and timeline. Safe to run repeatedly (idempotent).
 
 import { PrismaClient } from "@prisma/client";
+import { randomBytes, scryptSync } from "node:crypto";
 import { CATALOG } from "../src/data/catalog";
 import { SAMPLE_VENUES } from "../src/data/sampleVenues";
 import { MADURAI_CATALOG_SEED } from "../src/data/maduraiCatalog";
 import { generateLayout } from "../src/lib/seating";
+
+// Inline scrypt hash (same scheme as src/lib/auth.ts) — the auth module imports
+// next/headers which can't run in a plain seed script.
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+}
+
+// Create the initial ADMIN account from env vars (secure, server-side only).
+// Never hardcoded; skips cleanly if the env vars aren't set.
+async function seedAdmin() {
+  const email = process.env.ADMIN_INITIAL_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_INITIAL_PASSWORD?.trim();
+  if (!email || !password) {
+    console.log("Admin seed skipped (set ADMIN_INITIAL_EMAIL and ADMIN_INITIAL_PASSWORD to create one).");
+    return;
+  }
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    await prisma.user.update({ where: { email }, data: { role: "ADMIN", status: "ACTIVE" } });
+    console.log(`Admin ensured: ${email}`);
+    return;
+  }
+  await prisma.user.create({
+    data: { email, name: "Administrator", role: "ADMIN", status: "ACTIVE", passwordHash: hashPassword(password) },
+  });
+  console.log(`Admin created: ${email}`);
+}
 
 const prisma = new PrismaClient();
 
@@ -214,6 +243,7 @@ async function main() {
   await seedCatalog();
   await seedVenues();
   await seedCatalogVenues();
+  await seedAdmin();
   await seedDemoPlan();
   console.log("Seed complete.");
 }
