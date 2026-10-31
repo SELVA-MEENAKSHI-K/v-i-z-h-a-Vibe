@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Header } from "@/components/ui/Header";
 import { apiSend } from "@/lib/client";
-import { GoogleButton } from "@/components/auth/GoogleButton";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthField, MailIcon, LockIcon, UserIcon, PhoneIcon } from "@/components/auth/AuthField";
+import { GoogleCardButton } from "@/components/auth/GoogleCardButton";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,16 +19,34 @@ export default function SignupPage() {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
+  function validate(): string | null {
+    if (!form.name.trim()) return "Please enter your full name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return "Please enter a valid email address.";
+    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password))
+      return "Password must be at least 8 characters and include letters and numbers.";
+    if (form.password !== form.confirmPassword) return "Passwords do not match.";
+    if (!accept) return "Please accept the terms and conditions.";
+    return null;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
+    const v = validate();
+    if (v) {
+      setError(v);
       return;
     }
+    setError(null);
     setBusy(true);
     try {
-      await apiSend("/api/auth/register", "POST", { ...form, phone: form.phone || null, acceptTerms: accept });
+      await apiSend("/api/auth/register", "POST", {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        password: form.password,
+        confirmPassword: form.confirmPassword,
+        acceptTerms: accept,
+      });
       router.push("/plans");
       router.refresh();
     } catch (err) {
@@ -37,74 +56,77 @@ export default function SignupPage() {
   }
 
   return (
-    <>
-      <Header />
-      <main id="main" className="mx-auto flex max-w-md flex-col px-4 py-12">
-        <h1 className="font-display text-3xl font-semibold">Create your account</h1>
-        <p className="mt-1 text-white/60">Save your venues, themes, menus, budgets and AI plans.</p>
+    <AuthShell
+      heading="Join"
+      headingAccent="VizhaVibe!"
+      subtitle="Create your account to plan events, discover venues and vendors, and keep all your celebrations in one place."
+    >
+      <h2 className="font-display text-3xl font-bold text-ink-900">Create Account</h2>
+      <p className="mt-1 text-sm text-ink-900/55">Start planning with VizhaVibe</p>
 
-        {error && <div role="alert" className="mt-4 rounded-lg border border-kumkum-500/40 bg-kumkum-500/10 px-3 py-2 text-sm text-red-200">{error}</div>}
+      {error && (
+        <div role="alert" className="mt-4 rounded-lg border border-kumkum-500/30 bg-kumkum-500/10 px-3 py-2 text-sm text-kumkum-600">
+          {error}
+        </div>
+      )}
 
-        <form onSubmit={submit} className="mt-6 space-y-4 rounded-2xl border border-white/10 vv-glass p-6">
-          <Field label="Full name" required>
-            <input required value={form.name} onChange={(e) => set("name", e.target.value)} className="vv-authinput" autoComplete="name" />
-          </Field>
-          <Field label="Email" required>
-            <input type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} className="vv-authinput" autoComplete="email" />
-          </Field>
-          <Field label="Mobile number" optional>
-            <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="vv-authinput" autoComplete="tel" />
-          </Field>
-          <Field label="Password" required>
-            <input type="password" required value={form.password} onChange={(e) => set("password", e.target.value)} className="vv-authinput" autoComplete="new-password" />
-            <span className="mt-1 block text-[11px] text-white/45">At least 8 characters, with letters and numbers.</span>
-          </Field>
-          <Field label="Confirm password" required>
-            <input type="password" required value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="vv-authinput" autoComplete="new-password" />
-          </Field>
-          <label className="flex items-start gap-2 text-sm text-white/70">
-            <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 accent-saffron-500" required />
-            I accept the terms and conditions.
-          </label>
-          <button type="submit" disabled={busy} className="w-full rounded-xl bg-saffron-500 px-6 py-3 font-semibold text-ink-900 hover:bg-saffron-400 disabled:opacity-60">
-            {busy ? "Creating…" : "Create account"}
-          </button>
+      <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
+        <AuthField label="Full name" icon={<UserIcon />} autoComplete="name" placeholder="Your name" value={form.name} onChange={(e) => set("name", e.target.value)} />
+        <AuthField label="Email" icon={<MailIcon />} type="email" autoComplete="email" placeholder="you@example.com" value={form.email} onChange={(e) => set("email", e.target.value)} />
+        <AuthField label="Phone number" icon={<PhoneIcon />} type="tel" autoComplete="tel" placeholder="Optional" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+        <AuthField
+          label="Password"
+          icon={<LockIcon />}
+          password
+          autoComplete="new-password"
+          placeholder="At least 8 characters"
+          hint="At least 8 characters, with letters and numbers."
+          value={form.password}
+          onChange={(e) => set("password", e.target.value)}
+        />
+        <AuthField
+          label="Confirm password"
+          icon={<LockIcon />}
+          password
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          value={form.confirmPassword}
+          onChange={(e) => set("confirmPassword", e.target.value)}
+        />
 
-          <GoogleButton />
-        </form>
+        <label className="flex items-start gap-2 text-sm text-ink-900/70">
+          <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 h-4 w-4 rounded accent-plum-600" />
+          I accept the terms and conditions.
+        </label>
 
-        <p className="mt-4 text-center text-sm text-white/60">
-          Already have an account?{" "}
-          <Link href="/login" className="text-saffron-400 hover:underline">
-            Log in
-          </Link>
-        </p>
+        <button
+          type="submit"
+          disabled={busy}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-plum-600 via-kumkum-500 to-saffron-500 px-6 py-3.5 font-semibold text-white shadow-lg shadow-plum-600/25 transition hover:brightness-110 disabled:opacity-60"
+        >
+          {busy ? "Creating…" : "Create Account"}
+          {!busy && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          )}
+        </button>
 
-        <style jsx global>{`
-          .vv-authinput {
-            width: 100%;
-            border-radius: 0.6rem;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            background: rgba(255, 255, 255, 0.05);
-            padding: 0.55rem 0.75rem;
-            font-size: 0.9rem;
-            color: #f4f1ea;
-          }
-        `}</style>
-      </main>
-    </>
-  );
-}
+        <div className="flex items-center gap-3 text-xs text-ink-900/40">
+          <span className="h-px flex-1 bg-ink-900/10" />
+          or
+          <span className="h-px flex-1 bg-ink-900/10" />
+        </div>
 
-function Field({ label, children, required, optional }: { label: string; children: React.ReactNode; required?: boolean; optional?: boolean }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-white/80">
-        {label}
-        {required && <span className="ml-0.5 text-kumkum-500">*</span>}
-        {optional && <span className="ml-1 text-xs font-normal text-white/40">(optional)</span>}
-      </span>
-      {children}
-    </label>
+        <GoogleCardButton />
+      </form>
+
+      <p className="mt-6 text-center text-sm text-ink-900/60">
+        Already have an account?{" "}
+        <Link href="/login" className="font-semibold text-kumkum-600 hover:underline">
+          Log in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }
