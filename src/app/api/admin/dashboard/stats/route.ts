@@ -16,12 +16,28 @@ export async function GET() {
     // Only count real accounts (have a passwordHash) — exclude the demo user.
     const realUser = { passwordHash: { not: null } } as const;
 
-    const [totalUsers, blockedUsers, newThisMonth, totalEvents, totalPlans] = await Promise.all([
+    const [
+      totalUsers,
+      blockedUsers,
+      newThisMonth,
+      totalEvents,
+      totalPlans,
+      totalVenues,
+      totalBudgetItems,
+      totalVendors,
+      totalMenus,
+      totalTasks,
+    ] = await Promise.all([
       prisma.user.count({ where: realUser }),
       prisma.user.count({ where: { ...realUser, status: "BLOCKED" } }),
       prisma.user.count({ where: { ...realUser, createdAt: { gte: startOfMonth } } }),
       prisma.eventPlan.count(),
       prisma.aiRecommendation.count({ where: { kind: "roadmap" } }),
+      prisma.savedVenue.count(),
+      prisma.budgetItem.count(),
+      prisma.savedVendor.count(),
+      prisma.menu.count(),
+      prisma.timelineTask.count(),
     ]);
 
     return ok({
@@ -31,6 +47,11 @@ export async function GET() {
       totalEvents,
       totalPlansGenerated: totalPlans,
       newUsersThisMonth: newThisMonth,
+      totalVenues,
+      totalBudgetItems,
+      totalVendors,
+      totalMenus,
+      totalTasks,
     });
   } catch (err) {
     if (err instanceof AuthError) return fail(err.message, err.status);

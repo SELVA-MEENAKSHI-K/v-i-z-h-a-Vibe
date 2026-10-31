@@ -26,22 +26,49 @@ export async function GET(req: Request) {
     const query = searchParams.get("query") || undefined;
     const maxPriceRaw = searchParams.get("maxPrice");
     const minRatingRaw = searchParams.get("minRating");
+    const latRaw = searchParams.get("lat");
+    const lngRaw = searchParams.get("lng");
 
-    const { vendors, usedSamples } = await discoverVendors({
+    const result = await discoverVendors({
       category,
       city,
       query,
       maxPrice: maxPriceRaw != null && maxPriceRaw !== "" ? Number(maxPriceRaw) : undefined,
       minRating: minRatingRaw != null && minRatingRaw !== "" ? Number(minRatingRaw) : undefined,
+      lat: latRaw != null && latRaw !== "" ? Number(latRaw) : undefined,
+      lng: lngRaw != null && lngRaw !== "" ? Number(lngRaw) : undefined,
     });
+
+    const { vendors, live, usedProvider, usedSamples, dbCount, keyMissing, providerError, source } = result;
+
+    // Build an HONEST notice that reflects exactly what was returned.
+    let notice: string;
+    if (usedProvider && live) {
+      notice =
+        `Live vendors from Geoapify (OpenStreetMap data)${dbCount > 0 ? ` + ${dbCount} verified record(s)` : ""}. ` +
+        "Live listings carry no ratings or prices — contact the vendor for a confirmed quote.";
+    } else if (usedProvider && providerError) {
+      notice = `Live vendor search is unavailable right now (${providerError}). Showing verified records only.`;
+    } else if (usedProvider) {
+      notice = "No live vendors matched. Showing verified records only.";
+    } else if (keyMissing && usedSamples) {
+      notice =
+        "Sample vendors — not live data. Add GEOAPIFY_API_KEY to discover real vendors near your city. " +
+        "Sample prices and ratings are indicative, never confirmed quotes.";
+    } else {
+      notice = "Showing verified vendor records.";
+    }
 
     return ok({
       categories: VENDOR_CATEGORIES,
       count: vendors.length,
+      live,
+      usedProvider,
       usedSamples,
-      notice: usedSamples
-        ? "Showing verified vendors where available, plus clearly-labelled sample vendors. Sample prices and ratings are indicative, not confirmed quotes."
-        : "Showing verified vendor records.",
+      keyMissing,
+      providerError,
+      source,
+      notice,
       vendors,
     });
   } catch (err) {

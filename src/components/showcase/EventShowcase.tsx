@@ -82,11 +82,11 @@ export function EventShowcase({ plan }: { plan: Plan }) {
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+    <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
       {/* Viewport */}
       <div
         className="relative overflow-hidden rounded-2xl border border-white/10 bg-ink-900"
-        style={{ height: "clamp(440px, 64vh, 720px)" }}
+        style={{ height: "clamp(420px, 56vh, 640px)" }}
       >
         {/* Camera controls */}
         <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-2">
@@ -147,9 +147,19 @@ export function EventShowcase({ plan }: { plan: Plan }) {
         </div>
       </div>
 
-      {/* Right column: stats panel + AI voice guide (stacks under the 3D model
-          on mobile; never overlaps the scene). */}
-      <div className="space-y-4">
+      {/* Right column: AI Voice Guide first (so its heading + controls sit near
+          the top, level with the 3D viewport), then the seating stats. On
+          desktop it sticks just under the sticky header; on smaller screens the
+          grid collapses to one column and everything stacks and scrolls
+          naturally under the 3D model. Nothing is clipped in a fixed height. */}
+      <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+        <AISeatingVoiceAssistant
+          eventName={plan.title}
+          env={env}
+          stats={stats}
+          arrangement={arrangement}
+          dims={dims}
+        />
         <SeatingStatsPanel
           env={env}
           stats={stats}
@@ -159,13 +169,6 @@ export function EventShowcase({ plan }: { plan: Plan }) {
           roomWidth={dims.width}
           roomDepth={dims.depth}
           isSampleVenue={dims.isSample}
-        />
-        <AISeatingVoiceAssistant
-          eventName={plan.title}
-          env={env}
-          stats={stats}
-          arrangement={arrangement}
-          dims={dims}
         />
       </div>
     </div>

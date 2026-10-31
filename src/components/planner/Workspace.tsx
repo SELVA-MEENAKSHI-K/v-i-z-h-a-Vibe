@@ -34,9 +34,9 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
   const [tab, setTab] = useState<Tab>("showcase");
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-4 pb-10 pt-4">
       {/* Plan header */}
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold">{plan.title}</h1>
           <p className="text-sm text-white/60">
@@ -67,7 +67,7 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
       <div className="min-h-[400px]">
         {tab === "showcase" && (
           <div>
-            <div className="mb-4">
+            <div className="mb-3">
               <h3 className="font-display text-xl font-semibold">Immersive event seating showcase</h3>
               <p className="text-sm text-white/60">
                 An automatic, event-specific 3D arrangement built from your guest count, venue size and event type. Rotate,

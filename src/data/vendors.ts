@@ -66,10 +66,16 @@ const CITIES = ["Madurai", "Chennai", "Bangalore"] as const;
 
 // A small, realistic sample set per category. These are clearly demo records —
 // the UI labels them "Sample" and never claims the prices are live quotes.
-// Photo paths are category-level so SmartImage always resolves to a real photo
-// or a designed placeholder (never a toy illustration).
+//
+// Photos: we return a real local photo ONLY for categories that actually have a
+// bundled, licensed image under /public/images/vendors/. For every other
+// category we return NO photo, so the card renders a category-specific
+// illustration (clearly labelled) rather than a broken image or a single
+// repeated generic "shop" picture. We never point at a file that doesn't exist.
+const VENDOR_PHOTOS_ON_DISK = new Set<string>(["decoration"]);
+
 function photo(category: string): string[] {
-  return [`/images/vendors/${category}.jpg`];
+  return VENDOR_PHOTOS_ON_DISK.has(category) ? [`/images/vendors/${category}.jpg`] : [];
 }
 
 const PACKAGES: Record<string, VendorPackage[]> = {

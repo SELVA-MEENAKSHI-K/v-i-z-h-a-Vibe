@@ -4,9 +4,22 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Plan, PlanVendorInfo, PlanSavedVendor, VendorStatus } from "./types";
 import { apiGet, apiSend, formatINR } from "@/lib/client";
 import { SmartImage } from "@/components/ui/SmartImage";
+import { VendorCategoryArt } from "@/components/ui/VendorCategoryArt";
+import { LiveBadge, CatalogBadge, SampleBadge } from "@/components/ui/Badges";
 
 type CategoryDef = { slug: string; name: string; budgetCategory: string; icon: string; blurb: string };
-type DiscoverResponse = { categories: CategoryDef[]; count: number; usedSamples: boolean; notice: string; vendors: PlanVendorInfo[] };
+type DiscoverResponse = {
+  categories: CategoryDef[];
+  count: number;
+  live: boolean;
+  usedProvider: boolean;
+  usedSamples: boolean;
+  keyMissing: boolean;
+  providerError: string | null;
+  source: "geoapify" | "catalog" | "sample";
+  notice: string;
+  vendors: PlanVendorInfo[];
+};
 
 const CITIES = ["", "Madurai", "Chennai", "Bangalore"];
 const STATUS_FLOW: VendorStatus[] = ["ENQUIRED", "NEGOTIATING", "CONFIRMED", "CANCELLED"];
@@ -35,6 +48,7 @@ export function VendorManagement({ plan, onSaved }: { plan: Plan; onSaved: (p: P
   const [minRating, setMinRating] = useState("");
   const [results, setResults] = useState<PlanVendorInfo[]>([]);
   const [notice, setNotice] = useState("");
+  const [meta, setMeta] = useState<{ live: boolean; usedProvider: boolean; keyMissing: boolean; providerError: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [compare, setCompare] = useState<string[]>([]);
@@ -57,6 +71,7 @@ export function VendorManagement({ plan, onSaved }: { plan: Plan; onSaved: (p: P
       setCategories(data.categories);
       setResults(data.vendors);
       setNotice(data.notice);
+      setMeta({ live: data.live, usedProvider: data.usedProvider, keyMissing: data.keyMissing, providerError: data.providerError });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load vendors.");
     } finally {
@@ -189,22 +204,54 @@ export function VendorManagement({ plan, onSaved }: { plan: Plan; onSaved: (p: P
         </select>
       </div>
 
-      {notice && <p className="text-xs text-white/45">{notice}</p>}
+      {/* Honest data-source banner */}
+      {!loading && meta && (
+        <div className="flex flex-wrap items-center gap-2">
+          {meta.live ? <LiveBadge /> : meta.keyMissing ? <SampleBadge /> : <CatalogBadge verified />}
+          {notice && <p className="text-xs text-white/50">{notice}</p>}
+        </div>
+      )}
+
+      {/* Missing-credentials helper */}
+      {!loading && meta?.keyMissing && (
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-4 text-sm text-amber-100/90">
+          <p className="font-medium text-amber-200">You&apos;re seeing sample vendors, not live data.</p>
+          <p className="mt-1 text-amber-100/70">
+            To discover real vendors near {city || "your city"}, add a{" "}
+            <code className="rounded bg-black/30 px-1 py-0.5 text-amber-200">GEOAPIFY_API_KEY</code> to your{" "}
+            <code className="rounded bg-black/30 px-1 py-0.5 text-amber-200">.env</code> (free tier at geoapify.com), then restart the server.
+          </p>
+        </div>
+      )}
+
+      {/* Provider-error helper */}
+      {!loading && meta && !meta.keyMissing && meta.usedProvider && meta.providerError && (
+        <div className="rounded-xl border border-kumkum-500/30 bg-kumkum-500/5 p-4 text-sm text-red-100/90">
+          <p className="font-medium text-red-200">Live vendor search is temporarily unavailable.</p>
+          <p className="mt-1 text-red-100/70">{meta.providerError}. Showing verified records only — no vendors were invented.</p>
+        </div>
+      )}
 
       {/* Compare bar */}
       {compareVendors.length >= 2 && <CompareTable vendors={compareVendors} onClose={() => setCompare([])} />}
 
       {/* Results */}
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-72 animate-pulse rounded-2xl bg-white/5" />
+            <div key={i} className="h-80 animate-pulse rounded-2xl bg-white/5" />
           ))}
         </div>
       ) : results.length === 0 ? (
-        <p className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-white/60">No vendors match these filters.</p>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-10 text-center">
+          <div className="text-4xl" aria-hidden>🔍</div>
+          <p className="mt-3 text-sm font-medium text-white/80">No vendors found for these filters.</p>
+          <p className="mt-1 text-xs text-white/50">
+            Try a different category or city{meta?.live ? ", or widen your search" : ""}. We never show made-up vendors to fill the gap.
+          </p>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((v) => (
             <VendorCard
               key={v.id}
@@ -240,36 +287,101 @@ function VendorCard({
   onSave: () => void;
 }) {
   const price = priceRange(vendor);
+  const prettyCategory = vendor.category.replace(/-/g, " ");
+  // A photo is only shown as a REAL vendor photo when it is a source-verified
+  // record. For sample/live(OSM) records we never claim an image is the real
+  // vendor — we render a clearly-labelled category illustration instead.
+  const hasVerifiedPhoto = vendor.verified && vendor.photos.length > 0 && !!vendor.photos[0];
+
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-800/60">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-ink-800/60 shadow-sm transition hover:border-white/20 hover:shadow-lg">
+      {/* Preview */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1c1033]">
-        <SmartImage src={vendor.photos[0]} alt={vendor.name} category="shop" sizes="(max-width:640px) 100vw, 33vw" />
-        <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${vendor.verified ? "bg-emerald-500/90 text-ink-900" : "bg-amber-400/90 text-ink-900"}`}>
-          {vendor.verified ? "✓ Verified" : "Sample"}
-        </span>
+        {hasVerifiedPhoto ? (
+          <SmartImage
+            src={vendor.photos[0]}
+            alt={`${vendor.name} — ${prettyCategory}`}
+            category="shop"
+            sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw"
+            credit={vendor.sourceName}
+          />
+        ) : (
+          <>
+            <VendorCategoryArt slug={vendor.category} />
+            <span className="absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[9px] text-white/75 backdrop-blur-sm">
+              Illustration — not a real photo
+            </span>
+          </>
+        )}
+        {/* Source/verification badge (shared component) */}
+        <div className="absolute left-2 top-2">
+          {vendor.source === "geoapify" ? <LiveBadge /> : vendor.verified ? <CatalogBadge verified /> : <SampleBadge />}
+        </div>
       </div>
-      <div className="flex flex-1 flex-col p-4">
-        <h4 className="font-semibold">{vendor.name}</h4>
-        <p className="text-xs capitalize text-white/55">
-          {vendor.category.replace("-", " ")}
-          {vendor.city ? ` · ${vendor.city}` : ""}
+
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-1 p-4">
+        <h4 className="text-[15px] font-semibold leading-tight">{vendor.name}</h4>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-white/55">
+          <span className="capitalize">{prettyCategory}</span>
+          {vendor.city && (
+            <>
+              <span aria-hidden>·</span>
+              <span>📍 {vendor.city}</span>
+            </>
+          )}
         </p>
-        <div className="mt-1 text-xs text-white/70">
+
+        <div className="mt-0.5 text-xs text-white/70">
           {vendor.rating != null ? `★ ${vendor.rating.toFixed(1)}${vendor.reviewCount ? ` (${vendor.reviewCount})` : ""}` : "No verified rating"}
         </div>
-        {price && <div className="mt-1 text-sm font-medium text-saffron-400">{price}</div>}
-        {!vendor.verified && <p className="mt-1 text-[10px] text-amber-300/80">Indicative prices — not a confirmed quote.</p>}
-        <div className="mt-auto flex flex-wrap gap-2 pt-3">
-          <button onClick={onEnquire} className="flex-1 rounded-lg bg-saffron-500 px-3 py-1.5 text-xs font-semibold text-ink-900 hover:bg-saffron-400">
+
+        {/* Price — honest: confirmed-looking only for verified records */}
+        {price ? (
+          <>
+            <div className="mt-1 text-sm font-semibold text-saffron-400">{price}</div>
+            {!vendor.verified && <p className="text-[10px] text-amber-300/80">Indicative range — not a confirmed quote.</p>}
+          </>
+        ) : (
+          <div className="mt-1 text-xs font-medium text-peacock-300">Contact vendor for a confirmed quote</div>
+        )}
+
+        {/* Attribution for live/verified records */}
+        {vendor.sourceName && vendor.source !== "sample" && (
+          <p className="mt-0.5 truncate text-[10px] text-white/40" title={vendor.sourceName}>
+            Source: {vendor.sourceName}
+            {vendor.sourceUrl ? (
+              <>
+                {" · "}
+                <a href={vendor.sourceUrl} target="_blank" rel="noreferrer noopener" className="text-peacock-400 hover:underline">
+                  view ↗
+                </a>
+              </>
+            ) : null}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="mt-auto flex items-center gap-2 pt-3">
+          <button
+            onClick={onEnquire}
+            className="flex-1 rounded-lg bg-saffron-500 px-3 py-2 text-xs font-semibold text-ink-900 transition hover:bg-saffron-400"
+          >
             {alreadySaved ? "Saved ✓ · Enquire" : "Enquire / Save"}
           </button>
-          <button onClick={onSave} className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:bg-white/5" title="Save without a message">
+          <button
+            onClick={onSave}
+            className="rounded-lg border border-white/15 px-3 py-2 text-xs text-white/80 transition hover:bg-white/5"
+            title="Save to your plan without a message"
+            aria-label={`Save ${vendor.name}`}
+          >
             + Save
           </button>
           <button
             onClick={onCompare}
             aria-pressed={inCompare}
-            className={`rounded-lg border px-3 py-1.5 text-xs ${inCompare ? "border-peacock-400 bg-peacock-500/20 text-peacock-200" : "border-white/15 text-white/80 hover:bg-white/5"}`}
+            aria-label={inCompare ? `Remove ${vendor.name} from compare` : `Add ${vendor.name} to compare`}
+            className={`rounded-lg border px-3 py-2 text-xs transition ${inCompare ? "border-peacock-400 bg-peacock-500/20 text-peacock-200" : "border-white/15 text-white/80 hover:bg-white/5"}`}
           >
             {inCompare ? "Comparing" : "Compare"}
           </button>

@@ -47,7 +47,7 @@ export function SeatingStatsPanel({
   const [c0, c1, c2] = env.palette;
 
   return (
-    <aside className="vv-scroll max-h-[680px] overflow-y-auto rounded-2xl border border-white/10 vv-glass p-4">
+    <aside className="rounded-2xl border border-white/10 vv-glass p-4">
       {/* Title */}
       <div>
         <div className="flex items-center gap-2">

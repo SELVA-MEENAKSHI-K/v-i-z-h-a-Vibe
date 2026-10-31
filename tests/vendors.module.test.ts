@@ -36,11 +36,19 @@ describe("vendor catalog", () => {
     }
   });
 
-  it("sample photo paths point at the local vendor image folder (no toy art)", () => {
+  it("only references vendor photos that actually exist on disk (honesty policy)", () => {
+    // A sample carries a photo ONLY for categories with a bundled, licensed
+    // image under /public/images/vendors/. Categories without a real photo
+    // return NO photo, so the card shows a clearly-labelled category
+    // illustration instead of a broken image or a repeated generic picture.
     for (const v of sampleVendors()) {
-      expect(v.photos.length).toBeGreaterThan(0);
-      expect(v.photos[0]).toMatch(/^\/images\/vendors\//);
+      if (v.photos.length > 0) {
+        expect(v.photos[0]).toMatch(/^\/images\/vendors\//);
+      }
     }
+    // Decoration has a real bundled photo; it must still be referenced.
+    const decor = sampleVendors().find((v) => v.category === "decoration");
+    expect(decor?.photos[0]).toBe("/images/vendors/decoration.jpg");
   });
 });
 

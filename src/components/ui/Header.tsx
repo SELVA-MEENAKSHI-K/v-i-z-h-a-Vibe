@@ -11,14 +11,15 @@ export function Header() {
   const { user, isAdmin, logout } = useAuth();
   const router = useRouter();
 
-  // Auth-aware nav. Admin link only shows for admins (and is enforced server-side).
+  // Auth-aware nav. The Admin entry is rendered as a distinct top-right button
+  // (below), shown only to admins and enforced again server-side on every
+  // /api/admin route — a normal user flipping this flag gets 403s.
   const links: { href: string; label: string }[] = [
     { href: "/", label: "Home" },
     { href: "/plan/new", label: "Start planning" },
   ];
   if (user) {
     links.push({ href: "/plans", label: "My Plans" }, { href: "/profile", label: "My Profile" });
-    if (isAdmin) links.push({ href: "/admin", label: "Admin" });
   }
 
   async function handleLogout() {
@@ -47,6 +48,14 @@ export function Header() {
               {l.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1 rounded-lg border border-plum-600/50 bg-plum-600/20 px-3 py-1 font-semibold text-violet-200 shadow-[0_0_18px_-6px_rgba(139,92,246,0.7)] transition hover:bg-plum-600/35 hover:text-white"
+            >
+              <span aria-hidden>🛡️</span> Admin
+            </Link>
+          )}
           {user ? (
             <button onClick={handleLogout} className="rounded-lg border border-white/15 px-3 py-1 text-sm hover:bg-white/5">
               Logout
@@ -95,6 +104,17 @@ export function Header() {
                 </Link>
               </li>
             ))}
+            {isAdmin && (
+              <li>
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-lg px-2 py-2.5 text-sm font-semibold text-violet-200 hover:bg-white/5"
+                >
+                  🛡️ Admin
+                </Link>
+              </li>
+            )}
             <li>
               {user ? (
                 <button onClick={handleLogout} className="block w-full rounded-lg px-2 py-2.5 text-left text-sm text-red-200 hover:bg-white/5">
