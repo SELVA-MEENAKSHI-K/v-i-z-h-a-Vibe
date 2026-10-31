@@ -1,14 +1,20 @@
 // VizhaVibe data model.
-// Default datasource is SQLite for a zero-config demo. To use PostgreSQL,
-// set provider = "postgresql" and point DATABASE_URL at your Postgres server
-// (see .env.example). The schema is written to be portable between the two.
+// Datasource: PostgreSQL (production target for Render — its filesystem is
+// ephemeral, so a SQLite file would be wiped on every deploy). The connection
+// string comes from DATABASE_URL (set in Render → Environment).
+//
+// NOTE: Prisma does not allow env() in `provider`, so it must be a literal.
+// For LOCAL development against SQLite instead, temporarily change `provider`
+// to "sqlite" and set DATABASE_URL="file:./dev.db". The schema itself is fully
+// portable (no native @db types, no enums, no Json columns — JSON is stored as
+// String), so only this one line differs between SQLite and PostgreSQL.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
