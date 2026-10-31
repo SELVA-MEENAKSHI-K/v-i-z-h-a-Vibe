@@ -101,12 +101,6 @@ export default function LoginPage() {
           )}
         </button>
 
-        <div className="flex items-center gap-3 text-xs text-ink-900/40">
-          <span className="h-px flex-1 bg-ink-900/10" />
-          or
-          <span className="h-px flex-1 bg-ink-900/10" />
-        </div>
-
         <GoogleCardButton remember={remember} />
       </form>
 

@@ -7,13 +7,18 @@ import { apiSend } from "@/lib/client";
 
 // Light-card "Continue with Google" button. Same Firebase Google flow as the
 // existing GoogleButton (popup → ID token → POST /api/auth/google → session),
-// styled for the white auth card. Hidden when Firebase isn't configured so no
-// dead control is shown.
-export function GoogleCardButton({ remember = false }: { remember?: boolean }) {
+// styled for the white auth card. Hidden — ALONG WITH its own "or" divider —
+// when Firebase isn't configured, so no dead control or dangling divider is
+// shown. It becomes visible automatically once the NEXT_PUBLIC_FIREBASE_* env
+// vars are set (see .env.example / DEPLOYMENT.md). `showDivider` lets a caller
+// opt out of the built-in divider.
+export function GoogleCardButton({ remember = false, showDivider = true }: { remember?: boolean; showDivider?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // No Firebase config → render nothing at all (button AND divider), so the
+  // auth card doesn't show an orphaned "or" line with empty space beneath it.
   if (!firebaseConfigured()) return null;
 
   async function onClick() {
@@ -32,7 +37,14 @@ export function GoogleCardButton({ remember = false }: { remember?: boolean }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {showDivider && (
+        <div className="flex items-center gap-3 text-xs text-ink-900/40">
+          <span className="h-px flex-1 bg-ink-900/10" />
+          or
+          <span className="h-px flex-1 bg-ink-900/10" />
+        </div>
+      )}
       {error && (
         <p role="alert" className="rounded-lg border border-kumkum-500/30 bg-kumkum-500/10 px-3 py-2 text-xs text-kumkum-600">
           {error}

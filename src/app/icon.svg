@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="VizhaVibe">
+  <!-- Brand favicon: a festive diya (oil lamp) in VizhaVibe's saffron/kumkum
+       palette on the dark ink background, mirroring the 🪔 wordmark. Next.js
+       App Router serves app/icon.svg as the favicon automatically. -->
+  <defs>
+    <linearGradient id="vvFlame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="0.5" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="vvLamp" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#be123c"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#1c1033"/>
+  <!-- flame -->
+  <path d="M16 6c1.9 2.2 3 4 3 5.8a3 3 0 0 1-6 0C13 10 14.1 8.2 16 6z" fill="url(#vvFlame)"/>
+  <!-- wick glow -->
+  <circle cx="16" cy="11.4" r="1" fill="#fff7ed"/>
+  <!-- lamp bowl -->
+  <path d="M6 19c2.2 3.2 6 5 10 5s7.8-1.8 10-5c-2.4-1.1-5.9-1.8-10-1.8S8.4 17.9 6 19z" fill="url(#vvLamp)"/>
+  <!-- base -->
+  <rect x="12" y="24" width="8" height="2.2" rx="1.1" fill="#7c2d12"/>
+</svg>

@@ -21,6 +21,16 @@ function authSecret(): string {
   return "dev-insecure-secret-change-me";
 }
 
+// Non-throwing pre-check: can we sign sessions right now? In production this
+// requires a real AUTH_SECRET (>=16 chars); in development the dev fallback is
+// always usable. Auth routes call this BEFORE creating a user so a config
+// problem yields a clear 503 instead of a mid-request 500 and a half-made row.
+export function authSecretReady(): boolean {
+  const secret = process.env.AUTH_SECRET?.trim();
+  if (secret && secret.length >= 16) return true;
+  return process.env.NODE_ENV !== "production";
+}
+
 // ---- Password hashing (scrypt) ---------------------------------------------
 
 export function hashPassword(password: string): string {
