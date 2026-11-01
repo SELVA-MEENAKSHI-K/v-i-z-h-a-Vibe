@@ -5,75 +5,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { EventCategoryDef } from "@/data/catalog";
 import { apiSend } from "@/lib/client";
 import { CategoryArt } from "@/components/ui/CategoryArt";
+import {
+  DIETARY,
+  STEPS,
+  GUEST_PRESETS,
+  BUDGET_PRESETS,
+  inr,
+  budgetToPos,
+  posToBudget,
+  isoLocal,
+  describeDate,
+  feel,
+} from "./wizardHelpers";
 
 type Props = {
   catalog: EventCategoryDef[];
   cities: string[];
   styles: { slug: string; name: string }[];
 };
-
-const DIETARY: { key: string; icon: string }[] = [
-  { key: "veg", icon: "🥬" },
-  { key: "non-veg", icon: "🍗" },
-  { key: "both", icon: "🍽️" },
-  { key: "jain", icon: "🌿" },
-  { key: "vegan", icon: "🌱" },
-];
-
-const STEPS = [
-  { label: "Event", hint: "What are we celebrating?" },
-  { label: "Details", hint: "When, where, how big?" },
-  { label: "Style", hint: "Make it yours" },
-];
-
-const GUEST_PRESETS = [50, 100, 200, 500, 1000];
-const BUDGET_PRESETS = [100000, 300000, 500000, 1000000, 2500000];
-const BUDGET_MIN = 50000;
-const BUDGET_MAX = 10000000;
-
-/* ---------- helpers ---------- */
-function inr(n: number) {
-  if (!Number.isFinite(n)) return "₹0";
-  if (n >= 10000000) return `₹${(n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 1)} Cr`;
-  if (n >= 100000) return `₹${(n / 100000).toFixed(n % 100000 === 0 ? 0 : 1)} L`;
-  return `₹${Math.round(n).toLocaleString("en-IN")}`;
-}
-
-function budgetToPos(v: number) {
-  const c = Math.min(BUDGET_MAX, Math.max(BUDGET_MIN, v || BUDGET_MIN));
-  return Math.round((Math.log(c / BUDGET_MIN) / Math.log(BUDGET_MAX / BUDGET_MIN)) * 1000);
-}
-
-function posToBudget(p: number) {
-  const raw = BUDGET_MIN * Math.pow(BUDGET_MAX / BUDGET_MIN, p / 1000);
-  const step = raw >= 1000000 ? 50000 : raw >= 200000 ? 10000 : 5000;
-  return Math.round(raw / step) * step;
-}
-
-function isoLocal(d: Date) {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-
-function describeDate(iso: string) {
-  if (!iso) return null;
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-  const text = d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-  const rel = days === 0 ? "today" : days > 0 ? `in ${days} day${days === 1 ? "" : "s"}` : `${-days} day${days === -1 ? "" : "s"} ago`;
-  return { text, rel, past: days < 0 };
-}
-
-function feel(perGuest: number) {
-  if (perGuest < 600) return { label: "Tight", tone: "text-red-300", pct: 18 };
-  if (perGuest < 1500) return { label: "Balanced", tone: "text-marigold-400", pct: 45 };
-  if (perGuest < 3000) return { label: "Comfortable", tone: "text-peacock-400", pct: 72 };
-  return { label: "Premium", tone: "text-saffron-400", pct: 100 };
-}
 
 /* ---------- component ---------- */
 export function SetupWizard({ catalog, cities, styles }: Props) {

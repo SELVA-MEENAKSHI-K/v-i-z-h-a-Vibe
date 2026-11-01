@@ -34,6 +34,7 @@ export default defineConfig({
         "src/lib/timeline.ts",
         "src/lib/schemas.ts",
         "src/lib/api.ts",
+        "src/lib/json.ts",
         "src/lib/env.ts",
         "src/lib/eventEnvironment.ts",
         "src/lib/venueDimensions.ts",
@@ -42,6 +43,7 @@ export default defineConfig({
         "src/components/ui/CategoryArt.tsx",
         "src/components/ui/Header.tsx",
         "src/components/setup/SetupWizard.tsx",
+        "src/components/setup/wizardHelpers.ts",
       ],
       exclude: ["**/*.d.ts", "src/lib/ai/types.ts"],
       thresholds: {

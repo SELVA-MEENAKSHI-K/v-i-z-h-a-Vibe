@@ -5,15 +5,7 @@ import { prisma } from "./db";
 import { findEventType } from "@/data/catalog";
 import { normalizeVendorRow } from "./vendors";
 import type { CreatePlanInput } from "./schemas";
-
-function parseJson<T>(s: string | null | undefined, fallback: T): T {
-  if (!s) return fallback;
-  try {
-    return JSON.parse(s) as T;
-  } catch {
-    return fallback;
-  }
-}
+import { parseJson } from "./json";
 
 export async function ensureDemoUser() {
   return prisma.user.upsert({

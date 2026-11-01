@@ -10,6 +10,7 @@
 import { prisma } from "./db";
 import { getServerConfig } from "./config";
 import { distanceKm } from "./venues";
+import { parseJson } from "./json";
 import { filterSampleVendors, vendorBudgetCategory, type VendorFilter, type VendorPackage } from "@/data/vendors";
 
 export type NormalizedVendor = {
@@ -32,15 +33,6 @@ export type NormalizedVendor = {
   sourceName: string | null;
   sourceUrl: string | null;
 };
-
-function parseJson<T>(s: string | null | undefined, fallback: T): T {
-  if (!s) return fallback;
-  try {
-    return JSON.parse(s) as T;
-  } catch {
-    return fallback;
-  }
-}
 
 type VendorRow = {
   id: string;

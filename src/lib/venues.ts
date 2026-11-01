@@ -8,6 +8,7 @@
 
 import { getServerConfig } from "./config";
 import { prisma } from "./db";
+import { parseJsonArray } from "./json";
 import { sampleVenuesForCity, type SampleVenue } from "@/data/sampleVenues";
 
 export type VenueSource = "geoapify" | "catalog" | "sample";
@@ -154,16 +155,6 @@ function directionsUrl(lat?: number | null, lng?: number | null): string | null 
     return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
   }
   return null;
-}
-
-function parseJsonArray(s: string | null | undefined): string[] {
-  if (!s) return [];
-  try {
-    const v = JSON.parse(s);
-    return Array.isArray(v) ? v : [];
-  } catch {
-    return [];
-  }
 }
 
 export function normalizeSample(v: SampleVenue): NormalizedVenue {
