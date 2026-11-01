@@ -6,6 +6,14 @@ A **3D-first, immersive event-planning platform** for events in **Madurai, Chenn
 
 ---
 
+## Problem & solution
+
+**Problem.** Planning a South Indian wedding or celebration means juggling venues, seating for hundreds of guests, regional menus, decor themes, vendors, budgets and timelines — usually across spreadsheets and flat photo galleries, with no sense of how the event will actually look or whether the seating even fits.
+
+**Solution.** VizhaVibe turns planning into an interactive, 3D-first experience: pick an event type, step into a generated 3D venue sized to your guest count, and layer on AI-assisted themes, regional menus, itemised budgets and a preparation timeline — with live venue/vendor discovery where configured. Every number is computed from your real selections, and anything not source-verified (sample data, AI suggestions, indicative prices) is clearly labelled so nothing is ever faked as a confirmed fact.
+
+---
+
 ## Key features
 
 - **Accounts & sessions**: email/password sign-up and log in, plus **"Continue with Google"** (Firebase Authentication, verified server-side). Secure scrypt password hashing, signed HTTP-only session cookies, password reset, and role-based access (`USER` / `ADMIN`). The demo journey still works without an account.
@@ -310,21 +318,40 @@ All responses use a `{ ok, data }` / `{ ok:false, error }` envelope. Inputs/outp
 
 ---
 
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Start the Next.js dev server. |
+| `npm run build` | `prisma generate` + `next build` (production bundle). |
+| `npm start` | Serve the production build. |
+| `npm run lint` | ESLint (`next/core-web-vitals` + `@typescript-eslint/recommended`), 0 warnings allowed. |
+| `npm run typecheck` | `tsc --noEmit` (strict). |
+| `npm test` | Run the unit/component/integration suite (vitest). |
+| `npm run test:coverage` | Run the suite with v8 coverage + thresholds. |
+| `npm run format` | Prettier write. |
+| `npm run security:audit` | `npm audit --omit=dev` (production-dependency vulnerabilities only). |
+| `npm run db:setup` | `prisma db push` + seed (local SQLite demo). |
+| `npm run seed` / `render-seed` | Seed the event catalog, sample data and first admin. |
+
 ## Testing
 
 ```bash
-npm test          # vitest run
+npm test               # vitest run (unit + component + integration)
+npm run test:coverage  # with v8 coverage + thresholds
 ```
 
-Covered by `tests/`:
+**207 tests across 27 files.** Coverage thresholds are enforced: statements/branches/lines ≥ 85% globally and all four metrics ≥ 85% on `src/lib/**` (the pure-logic core). What's covered:
 
-- **catalog** — 8+ categories, 30+ types, unique slugs, lookups, target cities.
-- **venues** — Google/sample normalization, missing-field handling (no fabrication), live/sample separation, city filtering.
-- **seating** — seat counting, shortfall/surplus/utilization, guest-aware layout generation, room bounds.
-- **ai** — deterministic demo output, generated/provider flags, budget ranges with assumptions, style/dietary-aware menus, descending timeline, chat disclaimers.
-- **schemas** — plan/layout/budget/chat validation and rejection of bad input.
+- **Pure logic** — `seating` (seat math, guest-aware layout, bounds), `menuBudget`, `timeline`, `showcaseSeating`, `eventEnvironment` (every event-type branch), `venueDimensions`, `rateLimit`.
+- **Schemas** — Zod valid + invalid cases for plan/layout/budget/chat/auth.
+- **AI** — provider gating, deterministic demo output, the OpenAI provider's JSON parse/provenance/error paths (no fabricated fallback).
+- **API helper** — `ok`/`fail`/`handleError` incl. Zod→422 and Prisma→503/409 mapping with no secret leakage.
+- **Security** — route ownership (403), auth required (401), not-found (404), validation (422), rate-limit (429), and the `next.config` security headers/CSP.
+- **Components** — `CategoryArt` (every slug), `Header` (logged in/out/admin, mobile, logout), `SetupWizard` (validation, navigation, submit payload).
+- **Accessibility** — `axe-core` runs on Login, Signup and the SetupWizard (`/plan/new`) surfaces with **zero violations**.
 
-The suite runs with `vitest` (`pool: forks`). Type-checking (`npm run typecheck`), linting (`npm run lint`), and the production build (`npm run build`) are also part of the verification workflow before each change is pushed.
+`tsc --noEmit`, `npm run lint`, and `npm run build` are part of the pre-push verification workflow.
 
 ---
 
@@ -338,6 +365,51 @@ The suite runs with `vitest` (`pool: forks`). Type-checking (`npm run typecheck`
 - **3D scene blank / "not supported"** — your device/browser may lack WebGL; the app auto-switches to the 2D plan.
 - **Live venues/vendors not showing** — confirm `GEOAPIFY_API_KEY` is set and you've restarted the server. Check the Geoapify dashboard for remaining daily quota.
 - **Local SQLite vs Postgres** — for a local demo flip the Prisma `provider` to `sqlite` and re-run `db:setup`; don't commit that change (production is `postgresql`).
+
+---
+
+## Requirements → feature → implementation → test
+
+Each stated requirement maps to a visible feature, the route/page and file that implement it, and the test that covers it.
+
+| Requirement | Feature | Route / page | Implementation file(s) | Test(s) |
+|---|---|---|---|---|
+| 3D-first venue experience | 3D event showcase (orbit/zoom, camera views, WebGL→2D fallback) | `/plan/[id]` → 3D Showcase tab | `components/showcase/EventShowcase.tsx`, `ShowcaseScene.tsx`, `VenueCameraControls.tsx` | `tests/showcase.test.ts`, `tests/venueDimensions.test.ts` |
+| Guest-count-aware seating | Seat math + auto-generated layout | 3D Showcase / Summary | `lib/seating.ts`, `lib/showcaseSeating.ts` | `tests/seating.test.ts`, `tests/showcase.test.ts` |
+| Guided event setup (category → type → details → style) | Setup wizard with validation | `/plan/new` | `components/setup/SetupWizard.tsx`, `lib/schemas.ts` | `tests/setupWizard.test.tsx`, `tests/schemas.test.ts` |
+| 8 categories / 30+ event types | Data-driven catalog | setup + home | `data/catalog.ts` | `tests/catalog.test.ts` |
+| Venue discovery (live + sample, honest labels) | Geoapify venue search + catalog + samples | `/plan/[id]` → Venue discovery | `lib/venues.ts`, `app/api/venues/search/route.ts` | `tests/venues.test.ts` |
+| Vendor discovery | Vendor search + per-category art, "contact for quote" | `/plan/[id]` → Vendors | `components/planner/VendorManagement.tsx`, `lib/vendors.ts`, `app/api/vendors/route.ts` | `tests/vendors.module.test.ts` |
+| AI themes/decor/menu/budget/timeline + chat | Provider abstraction (demo + OpenAI), advisory labels | `/plan/[id]` → AI tools | `lib/ai/*`, `app/api/ai/*` | `tests/ai.test.ts`, `tests/openaiProvider.test.ts` |
+| Regional menus & food budget | Visual menu gallery + live totals | `/plan/[id]` → Food menu | `components/menu/MenuGallery.tsx`, `lib/menuBudget.ts` | `tests/menuBudget.test.ts` |
+| Theme inspiration | Theme gallery + apply-to-3D | `/plan/[id]` → Themes | `components/themes/ThemeGallery.tsx`, `lib/eventEnvironment.ts` | `tests/themes.test.ts`, `tests/eventEnvironment.test.ts` |
+| Itemised budget | Editable budget + vendor sync | `/plan/[id]` → Budget | `components/planner/BudgetPanel.tsx`, `app/api/plans/[id]/budget/route.ts` | `tests/menuBudget.test.ts`, `tests/security.routes.test.ts` |
+| Preparation timeline | Task list with deadlines/status | `/plan/[id]` → Timeline | `components/planner/TimelinePanel.tsx`, `lib/timeline.ts` | `tests/timeline.test.ts` |
+| Complete AI plan (roadmap) | "Generate my complete plan" | `/plan/[id]` → Final Plan | `lib/ai/roadmap.ts`, `app/api/plans/[id]/roadmap/route.ts` | `tests/roadmap.test.ts` |
+| Shareable plans | Unguessable `shareToken` URLs | `/plan/[id]` | `lib/plans.ts` | `tests/security.routes.test.ts` |
+| Accounts (email/password + Google) | Auth with sessions + roles | `/login`, `/signup` | `lib/auth.ts`, `lib/firebaseVerify.ts`, `app/api/auth/*` | `tests/auth.test.ts`, `tests/firebaseVerify.test.ts` |
+| Admin monitoring | Tabbed admin dashboard | `/admin` | `app/admin/*`, `app/api/admin/*` | `tests/security.routes.test.ts` (ownership/role), `tests/header.test.tsx` (admin gating) |
+| Authorized venue catalog | Admin catalog with provenance | `/plan/[id]` venue list | `app/api/admin/catalog-venues/route.ts`, `data/maduraiCatalog.ts` | `tests/catalog.test.ts`, `tests/venues.test.ts` |
+| Config transparency | Live/sample/demo status banners | header | `components/ui/ConfigStatus.tsx`, `lib/config.ts` | `tests/env.test.ts`, `tests/fallbacks.test.ts` |
+| Accessibility (WCAG 2.2 AA) | focus rings, labels, skip link, pause-animations, reduced-motion | all pages | `app/layout.tsx`, `app/globals.css`, `components/ui/AnimationToggle.tsx` | `tests/a11y.test.tsx` |
+| Security headers / CSP | CSP + hardening headers | all responses | `next.config.mjs` | `tests/security.headers.test.ts` |
+
+### Requirements that are missing or weak (honest list)
+
+- **RSVP / guest-list management** — not implemented. The platform plans the event; it does not collect guest RSVPs. (Larger feature; listed, not built.)
+- **Full-page axe tests for Home & Plans** — those are async server components that don't render in jsdom; a11y is axe-tested on the interactive client surfaces instead (login, signup, setup wizard). Full-page coverage would need Playwright + a running server.
+- **`shareToken` length** — uses Prisma `cuid()` (unguessable, collision-resistant) rather than a 32+ char token; adequate for a share link, but not changed to avoid a data migration.
+- **Multi-instance rate limiting** — the in-memory limiter is single-instance; production scale-out would need Redis/Upstash (documented in `lib/rateLimit.ts`).
+
+---
+
+## Known limitations
+
+- **Deferred dependency upgrades.** `npm run security:audit` reports vulnerabilities in `next`, `postcss` (via next), `zod`, and `@grpc/grpc-js` (via `firebase`). Every available fix is a **breaking major upgrade** (next 14→16, zod 3→4, a firebase API change) that would alter behaviour, so they are **intentionally deferred** rather than force-upgraded. All non-breaking fixes have been applied (`npm audit fix`). The added CSP and security headers mitigate several of the Next.js DoS/XSS classes at the edge. Re-evaluate when upgrading the framework majors is planned.
+- **Password hashing uses Node `scrypt`** (a memory-hard KDF in the same class as bcrypt/argon2), chosen to avoid an extra native dependency. Switching hashers later would require a migration of existing hashes.
+- **Rate limiting is in-memory** (single instance) — see above.
+- **Live AI/venue/vendor data requires keys** (`OPENAI_API_KEY`, `GEOAPIFY_API_KEY`). Without them the app runs in clearly-labelled demo/sample mode — it never fabricates live results.
+- **Database for production is PostgreSQL.** For a zero-config local demo, flip the Prisma `provider` to `sqlite` (see "Using PostgreSQL vs SQLite"); don't commit that change.
 
 ---
 

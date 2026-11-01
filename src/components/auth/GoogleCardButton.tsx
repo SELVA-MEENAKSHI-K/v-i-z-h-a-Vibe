@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { signInWithGoogleIdToken, firebaseConfigured } from "@/lib/firebase.client";
 import { apiSend } from "@/lib/client";
 
-// Light-card "Continue with Google" button. Same Firebase Google flow as the
-// existing GoogleButton (popup → ID token → POST /api/auth/google → session),
-// styled for the white auth card. Hidden — ALONG WITH its own "or" divider —
+// Light-card "Continue with Google" button. Firebase Google flow (popup → ID
+// token → POST /api/auth/google → session), styled for the white auth card.
+// Hidden — ALONG WITH its own "or" divider —
 // when Firebase isn't configured, so no dead control or dangling divider is
 // shown. It becomes visible automatically once the NEXT_PUBLIC_FIREBASE_* env
 // vars are set (see .env.example / DEPLOYMENT.md). `showDivider` lets a caller
