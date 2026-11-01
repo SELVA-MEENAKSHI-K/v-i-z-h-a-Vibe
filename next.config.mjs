@@ -61,16 +61,35 @@ const nextConfig = {
 // drops it. Everything else is identical so behaviour matches in both modes.
 const isDev = process.env.NODE_ENV !== "production";
 const scriptSrc = ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", isDev ? "'unsafe-eval'" : ""].filter(Boolean).join(" ");
+// Hosts the @react-three/drei runtime fetches from. The <Environment preset=…>
+// HDRIs are served from the drei-assets repo via githack/githubusercontent, and
+// draco/basis/meshopt decoders are loaded from gstatic/jsdelivr. These are
+// fetched by the browser (connect-src) and some decoders run as blob workers.
+const threeDConnect = [
+  "https://raw.githack.com",
+  "https://*.githack.com",
+  "https://raw.githubusercontent.com",
+  "https://www.gstatic.com",
+  "https://fonts.gstatic.com",
+  "https://cdn.jsdelivr.net",
+].join(" ");
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src ${scriptSrc}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://places.googleapis.com https://maps.googleapis.com https://lh3.googleusercontent.com https://upload.wikimedia.org",
+  // img-src also covers 3D textures / basis images pulled from the decoder CDNs.
+  "img-src 'self' data: blob: https://places.googleapis.com https://maps.googleapis.com https://lh3.googleusercontent.com https://upload.wikimedia.org https://www.gstatic.com https://cdn.jsdelivr.net",
   "media-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.geoapify.com https://api.openai.com",
-  "frame-src 'self' https://*.firebaseapp.com",
+  // font-src covers drei <Text> fonts loaded from Google's font CDN.
+  "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
+  // connect-src: app/provider endpoints + the 3D asset hosts (HDR/draco/fonts).
+  `connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.geoapify.com https://api.openai.com ${threeDConnect}`,
+  // frame-src: Firebase auth popups + the keyless OpenStreetMap map embed.
+  "frame-src 'self' https://*.firebaseapp.com https://www.openstreetmap.org",
+  // Draco/basis decoders run as blob-URL workers.
   "worker-src 'self' blob:",
+  "child-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

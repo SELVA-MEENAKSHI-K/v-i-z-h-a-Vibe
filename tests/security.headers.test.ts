@@ -63,4 +63,28 @@ describe("security headers (next.config)", () => {
     expect(imgSrc).toContain("data:");
     expect(imgSrc).toContain("blob:");
   });
+
+  it("CSP connect-src allows the 3D asset hosts (drei Environment HDR, draco, fonts)", async () => {
+    const csp = (await headerMap()).get("Content-Security-Policy") ?? "";
+    const connectSrc = csp.split(";").map((s) => s.trim()).find((s) => s.startsWith("connect-src")) ?? "";
+    // drei <Environment preset=…> fetches HDRIs from the drei-assets repo via githack.
+    expect(connectSrc).toContain("https://raw.githack.com");
+    expect(connectSrc).toContain("https://*.githack.com");
+    expect(connectSrc).toContain("https://raw.githubusercontent.com");
+    // draco / basis / meshopt decoders + drei Text fonts.
+    expect(connectSrc).toContain("https://www.gstatic.com");
+    expect(connectSrc).toContain("https://fonts.gstatic.com");
+    expect(connectSrc).toContain("https://cdn.jsdelivr.net");
+  });
+
+  it("CSP worker/child-src allow blob workers (draco decoders) and the OSM map frame", async () => {
+    const csp = (await headerMap()).get("Content-Security-Policy") ?? "";
+    const workerSrc = csp.split(";").map((s) => s.trim()).find((s) => s.startsWith("worker-src")) ?? "";
+    const childSrc = csp.split(";").map((s) => s.trim()).find((s) => s.startsWith("child-src")) ?? "";
+    const frameSrc = csp.split(";").map((s) => s.trim()).find((s) => s.startsWith("frame-src")) ?? "";
+    expect(workerSrc).toContain("blob:");
+    expect(childSrc).toContain("blob:");
+    // The keyless OpenStreetMap map embed on the Final Plan page.
+    expect(frameSrc).toContain("https://www.openstreetmap.org");
+  });
 });
