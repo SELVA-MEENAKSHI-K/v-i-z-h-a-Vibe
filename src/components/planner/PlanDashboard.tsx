@@ -208,13 +208,13 @@ export function PlanDashboard({ plan, onSaved }: { plan: Plan; onSaved?: (p: Pla
             {/* Food photos */}
             <Card title="Selected menu">
               {dishes.length ? (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {dishes.map((d) => (
                     <div key={d.slug}>
                       <div className="relative aspect-square overflow-hidden rounded-lg">
-                        <SmartImage src={d.imageUrl} alt={d.name} category="food" sizes="20vw" noIllustrativeFallback placeholderText="No photo" />
+                        <SmartImage src={d.imageUrl} alt={d.name} category="food" sizes="(max-width:640px) 45vw, 20vw" noIllustrativeFallback placeholderText="No photo" />
                       </div>
-                      <div className="mt-1 truncate text-[10px] text-white/60">{d.name}</div>
+                      <div className="mt-1 truncate text-xs text-white/60">{d.name}</div>
                     </div>
                   ))}
                 </div>

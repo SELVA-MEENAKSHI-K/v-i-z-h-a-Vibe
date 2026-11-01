@@ -493,8 +493,8 @@ function EnquiryModal({ vendor, onClose, onSend }: { vendor: PlanVendorInfo; onC
   const [msg, setMsg] = useState("");
   const [pkg, setPkg] = useState(vendor.packages[0]?.name ?? "");
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="enquiry-title" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-ink-900 p-5" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="enquiry-title" onClick={onClose}>
+      <div className="vv-scroll my-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-ink-900 p-5" onClick={(e) => e.stopPropagation()}>
         <h3 id="enquiry-title" className="font-display text-lg font-semibold">Enquire — {vendor.name}</h3>
         <p className="mt-1 text-xs text-white/55">We&apos;ll save this vendor to your plan with status ENQUIRED and keep your message.</p>
         {vendor.packages.length > 0 && (

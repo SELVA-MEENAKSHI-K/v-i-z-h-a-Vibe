@@ -83,7 +83,7 @@ export default function AdminPage() {
   return (
     <>
       <Header />
-      <main id="main" className="mx-auto max-w-7xl px-4 py-8">
+      <main id="main" className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="font-display text-3xl font-semibold">Admin dashboard</h1>
@@ -212,16 +212,23 @@ function UsersTab({ adminId, onError, onMutated }: { adminId?: string; onError: 
                 <td><span className={`rounded-full px-2 py-0.5 text-[11px] ${u.status === "BLOCKED" ? "bg-kumkum-500/30 text-red-200" : "bg-emerald-400/15 text-emerald-300"}`}>{u.status}</span></td>
                 <td className="text-white/70">{u.eventCount}</td>
                 <td className="text-white/50">{new Date(u.createdAt).toLocaleDateString("en-IN")}</td>
-                <td className="p-2 text-right">
-                  <Link href={`/admin/users/${u.id}`} className="mr-2 text-peacock-400 hover:underline">View</Link>
-                  {u.id !== adminId && (
-                    <button
-                      onClick={() => setConfirm({ id: u.id, name: u.name ?? u.email ?? "user", to: u.status === "BLOCKED" ? "ACTIVE" : "BLOCKED" })}
-                      className={`rounded px-2 py-1 text-xs ${u.status === "BLOCKED" ? "bg-emerald-600/80 text-white" : "bg-kumkum-500/80 text-white"}`}
+                <td className="p-2">
+                  <div className="flex items-center justify-end gap-2">
+                    <Link
+                      href={`/admin/users/${u.id}`}
+                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-peacock-400 hover:bg-white/5"
                     >
-                      {u.status === "BLOCKED" ? "Unblock" : "Block"}
-                    </button>
-                  )}
+                      View
+                    </Link>
+                    {u.id !== adminId && (
+                      <button
+                        onClick={() => setConfirm({ id: u.id, name: u.name ?? u.email ?? "user", to: u.status === "BLOCKED" ? "ACTIVE" : "BLOCKED" })}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-medium ${u.status === "BLOCKED" ? "bg-emerald-600/80 text-white hover:bg-emerald-600" : "bg-kumkum-500/80 text-white hover:bg-kumkum-500"}`}
+                      >
+                        {u.status === "BLOCKED" ? "Unblock" : "Block"}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
