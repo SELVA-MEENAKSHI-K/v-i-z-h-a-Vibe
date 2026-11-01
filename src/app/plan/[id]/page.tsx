@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { Header } from "@/components/ui/Header";
 import { Workspace } from "@/components/planner/Workspace";
 import { serializePlan } from "@/lib/plans";

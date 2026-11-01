@@ -163,7 +163,6 @@ export function AISeatingVoiceAssistant({ eventName, env, stats, arrangement, di
   }, [lang]);
 
   const speaking = state === "speaking";
-  const captionLines = [script.title, ...script.paragraphs];
 
   return (
     <section

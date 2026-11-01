@@ -1,6 +1,6 @@
 "use client";
 
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error: _error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html lang="en">
       <body style={{ background: "#0b0a14", color: "#f4f1ea", fontFamily: "system-ui, sans-serif" }}>

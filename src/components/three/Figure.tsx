@@ -78,7 +78,6 @@ type Joints = {
 };
 
 const S = Math.sin;
-const C = Math.cos;
 const pos = (v: number) => Math.max(0, v);
 
 function reset(j: Joints) {

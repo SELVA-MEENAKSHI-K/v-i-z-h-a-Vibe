@@ -11,7 +11,6 @@ import type { Plan } from "../planner/types";
 import { apiSend, formatINR } from "@/lib/client";
 import { SmartImage } from "../ui/SmartImage";
 import {
-  THEMES,
   THEME_CATEGORIES,
   THEME_REGIONS,
   THEME_BUDGET_TIERS,

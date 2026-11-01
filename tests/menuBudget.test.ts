@@ -75,6 +75,13 @@ describe("computeFoodEstimate", () => {
     expect(est.totalMax).toBe(0);
     expect(est.perPersonMin).toBe(0);
   });
+
+  it("yields zero per-person cost when there are zero guests (no divide-by-zero)", () => {
+    const est = computeFoodEstimate(0, selections);
+    expect(est.guests).toBe(0);
+    expect(est.perPersonMin).toBe(0);
+    expect(est.perPersonMax).toBe(0);
+  });
 });
 
 describe("remainingAfterFood", () => {

@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { generateRoadmap } from "@/lib/ai/roadmap";
+import type { SerializedPlan } from "@/lib/plans";
 
-// Minimal plan shaped like SerializedPlan for the roadmap generator.
-function makePlan(overrides: Record<string, unknown> = {}): any {
+// Minimal plan shaped like SerializedPlan for the roadmap generator. Cast via
+// unknown so we can supply only the fields the generator reads without using
+// `any` (which the lint config forbids).
+function makePlan(overrides: Record<string, unknown> = {}): SerializedPlan {
   return {
     id: "p1",
     shareToken: "tok",
@@ -29,7 +32,7 @@ function makePlan(overrides: Record<string, unknown> = {}): any {
     createdAt: "",
     updatedAt: "",
     ...overrides,
-  };
+  } as unknown as SerializedPlan;
 }
 
 describe("AI roadmap generator", () => {
@@ -76,5 +79,35 @@ describe("AI roadmap generator", () => {
   it("builds an evening timeline for a reception", () => {
     const r = generateRoadmap(makePlan({ eventType: { slug: "reception", name: "Reception", categoryName: "Weddings", defaultStyles: [] } }));
     expect(r.timeline.some((s) => s.time.includes("PM"))).toBe(true);
+  });
+
+  it("builds a corporate conference roadmap (different category branch)", () => {
+    const r = generateRoadmap(
+      makePlan({
+        eventType: { slug: "conference", name: "Conference", categoryName: "Corporate", defaultStyles: [] },
+        styles: [],
+        preferences: {},
+      }),
+    );
+    expect(r.overview.eventType).toBe("Conference");
+    expect(r.timeline.length).toBeGreaterThan(0);
+  });
+
+  it("handles a plan with no menu and no budget lines without crashing", () => {
+    const r = generateRoadmap(makePlan({ menus: [], budgetItems: [], budget: 0 }));
+    expect(r.food.estMin).toBe(0);
+    expect(r.budgetReport.remainingMin).toBeNull();
+  });
+
+  it("flags an over-budget plan in the budget report", () => {
+    // Tiny budget vs large catering cost => remaining goes negative/short.
+    const r = generateRoadmap(makePlan({ budget: 10000 }));
+    expect(r.budgetReport.totalMax).toBeGreaterThan(10000);
+  });
+
+  it("names the structured provider by default", () => {
+    const r = generateRoadmap(makePlan());
+    expect(r.provider).toBe("structured");
+    expect(r.generated).toBe(true);
   });
 });

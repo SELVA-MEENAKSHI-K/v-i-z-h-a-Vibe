@@ -75,7 +75,6 @@ export function generateLayout(guestCount: number, roomWidth = 24, roomDepth = 1
 
   // Dining area occupies the rear 60% of the room (away from stage/entrance).
   const areaWidth = roomWidth - 6;
-  const areaDepth = roomDepth * 0.5;
   const areaStartZ = -roomDepth / 2 + 8; // just behind the dance floor
 
   const spacing = 3.2; // meters between table centers

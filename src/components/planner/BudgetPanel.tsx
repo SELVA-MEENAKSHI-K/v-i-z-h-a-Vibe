@@ -32,7 +32,7 @@ export function BudgetPanel({ plan, onSaved }: { plan: Plan; onSaved: (p: Plan) 
     setSaving(true);
     try {
       const data = await apiSend<{ plan: Plan }>(`/api/plans/${plan.shareToken}/budget`, "POST", {
-        items: items.map(({ id, ...rest }) => rest),
+        items: items.map(({ id: _id, ...rest }) => rest),
       });
       onSaved(data.plan);
       setItems(data.plan.budgetItems);
