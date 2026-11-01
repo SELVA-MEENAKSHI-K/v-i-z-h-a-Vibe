@@ -83,11 +83,12 @@ export function EventShowcase({ plan }: { plan: Plan }) {
 
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
-      {/* Viewport — the dominant area. Taller on larger screens so the 3D scene
-          reads clearly; never shrinks below a usable height on mobile. */}
+      {/* Viewport — the main area, but a balanced height so the camera controls
+          stay visible at the top and the scene doesn't leave a large empty
+          band below it. Scales gently with the screen; usable on mobile. */}
       <div
         className="relative overflow-hidden rounded-2xl border border-white/10 bg-ink-900"
-        style={{ height: "clamp(460px, 68vh, 820px)" }}
+        style={{ height: "clamp(440px, 56vh, 660px)" }}
       >
         {/* Camera controls */}
         <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-2">
@@ -152,8 +153,11 @@ export function EventShowcase({ plan }: { plan: Plan }) {
           the top, level with the 3D viewport), then the seating stats. On
           desktop it sticks just under the sticky header; on smaller screens the
           grid collapses to one column and everything stacks and scrolls
-          naturally under the 3D model. Nothing is clipped in a fixed height. */}
-      <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          naturally under the 3D model. On desktop the column is sticky and, if
+          its content is taller than the screen, it scrolls INTERNALLY (capped
+          to the viewport height) so the AI guide + full summary are always
+          reachable and never clipped by the sticky positioning. */}
+      <div className="vv-scroll space-y-4 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
         <AISeatingVoiceAssistant
           eventName={plan.title}
           env={env}
