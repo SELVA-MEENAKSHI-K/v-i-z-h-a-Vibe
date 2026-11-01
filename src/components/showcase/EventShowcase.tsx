@@ -82,20 +82,21 @@ export function EventShowcase({ plan }: { plan: Plan }) {
   );
 
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[1fr_360px]">
-      {/* Viewport */}
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+      {/* Viewport — the dominant area. Taller on larger screens so the 3D scene
+          reads clearly; never shrinks below a usable height on mobile. */}
       <div
         className="relative overflow-hidden rounded-2xl border border-white/10 bg-ink-900"
-        style={{ height: "clamp(420px, 56vh, 640px)" }}
+        style={{ height: "clamp(460px, 68vh, 820px)" }}
       >
         {/* Camera controls */}
         <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-2">
-          <div className="flex overflow-hidden rounded-lg border border-white/10 vv-glass text-xs">
+          <div className="flex overflow-hidden rounded-lg border border-white/10 vv-glass text-sm">
             {VIEWS.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setView(v.id)}
-                className={`px-3 py-1.5 ${view === v.id ? "bg-saffron-500 text-ink-900" : "text-white/80"}`}
+                className={`px-3.5 py-2 ${view === v.id ? "bg-saffron-500 text-ink-900" : "text-white/80 hover:bg-white/10"}`}
               >
                 {v.label}
               </button>
@@ -106,7 +107,7 @@ export function EventShowcase({ plan }: { plan: Plan }) {
               setView("iso");
               setResetSignal((s) => s + 1);
             }}
-            className="rounded-lg border border-white/10 vv-glass px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
+            className="rounded-lg border border-white/10 vv-glass px-3.5 py-2 text-sm text-white/80 hover:bg-white/10"
             title="Reset camera"
           >
             ⟳ Reset camera
@@ -114,7 +115,7 @@ export function EventShowcase({ plan }: { plan: Plan }) {
         </div>
 
         {/* Event badge */}
-        <div className="absolute right-3 top-3 z-10 rounded-lg border border-white/10 vv-glass px-3 py-2 text-xs">
+        <div className="absolute right-3 top-3 z-10 rounded-lg border border-white/10 vv-glass px-3.5 py-2 text-sm">
           <div className="font-medium text-white">{env.displayName}</div>
           <div className="text-white/60">
             {stats.seatsArranged} of {stats.totalCapacity} seats arranged

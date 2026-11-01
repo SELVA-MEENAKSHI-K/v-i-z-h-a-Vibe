@@ -31,7 +31,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 vv-glass">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2" onClick={() => setOpen(false)}>
           <span className="text-2xl" aria-hidden>
             🪔

@@ -34,12 +34,12 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
   const [tab, setTab] = useState<Tab>("showcase");
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-10 pt-4">
+    <div className="mx-auto max-w-[1600px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
       {/* Plan header */}
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold">{plan.title}</h1>
-          <p className="text-sm text-white/60">
+          <h1 className="font-display text-3xl font-semibold lg:text-4xl">{plan.title}</h1>
+          <p className="mt-1 text-sm text-white/65 lg:text-base">
             {plan.eventType.name} · {plan.city} · {plan.guestCount} guests
             {plan.styles.length ? ` · ${plan.styles.join(", ")}` : ""}
           </p>
@@ -47,14 +47,14 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
       </div>
 
       {/* Tabs */}
-      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-white/10 pb-px" role="tablist">
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-white/10 pb-px" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`whitespace-nowrap rounded-t-lg px-4 py-2 text-sm ${
+            className={`whitespace-nowrap rounded-t-lg px-4 py-2.5 text-sm font-medium lg:text-[15px] ${
               tab === t.id ? "bg-white/8 text-white" : "text-white/60 hover:text-white"
             }`}
           >
@@ -67,9 +67,9 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
       <div className="min-h-[400px]">
         {tab === "showcase" && (
           <div>
-            <div className="mb-3">
-              <h3 className="font-display text-xl font-semibold">Immersive event seating showcase</h3>
-              <p className="text-sm text-white/60">
+            <div className="mb-4">
+              <h3 className="font-display text-2xl font-semibold">Immersive event seating showcase</h3>
+              <p className="mt-1 max-w-3xl text-sm text-white/65 lg:text-base">
                 An automatic, event-specific 3D arrangement built from your guest count, venue size and event type. Rotate,
                 zoom and inspect — colours, decor and lighting adapt to the event.
               </p>
@@ -78,20 +78,20 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
           </div>
         )}
         {tab === "venues" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <VenueDiscovery plan={plan} onSaved={setPlan} />
           </div>
         )}
         {tab === "vendors" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <VendorManagement plan={plan} onSaved={setPlan} />
           </div>
         )}
         {tab === "themes" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <div className="mb-4">
-              <h3 className="font-display text-xl font-semibold">Theme inspiration gallery</h3>
-              <p className="text-sm text-white/60">
+              <h3 className="font-display text-2xl font-semibold">Theme inspiration gallery</h3>
+              <p className="mt-1 max-w-3xl text-sm text-white/65 lg:text-base">
                 Browse real wedding &amp; event theme photographs, filter by style, and apply one to drive your 3D planner.
               </p>
             </div>
@@ -99,10 +99,10 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
           </div>
         )}
         {tab === "menu" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <div className="mb-4">
-              <h3 className="font-display text-xl font-semibold">Visual food menu</h3>
-              <p className="text-sm text-white/60">
+              <h3 className="font-display text-2xl font-semibold">Visual food menu</h3>
+              <p className="mt-1 max-w-3xl text-sm text-white/65 lg:text-base">
                 Build your menu from image-rich dish cards. Totals update live from your guest count and per-plate prices.
               </p>
             </div>
@@ -110,22 +110,22 @@ export function Workspace({ initialPlan }: { initialPlan: Plan }) {
           </div>
         )}
         {tab === "ai" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <AiTools plan={plan} />
           </div>
         )}
         {tab === "budget" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <BudgetPanel plan={plan} onSaved={setPlan} />
           </div>
         )}
         {tab === "timeline" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <TimelinePanel plan={plan} onSaved={setPlan} />
           </div>
         )}
         {tab === "summary" && (
-          <div className="vv-glass rounded-2xl p-5">
+          <div className="vv-glass rounded-2xl p-5 lg:p-6">
             <SummaryPanel plan={plan} />
           </div>
         )}
