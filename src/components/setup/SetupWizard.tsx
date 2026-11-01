@@ -277,13 +277,13 @@ export function SetupWizard({ catalog, cities, styles }: Props) {
         </div>
 
         {error && (
-          <div key={errorTick} role="alert" className="vv-shake mb-4 flex items-center gap-2 rounded-xl border border-kumkum-500/40 bg-kumkum-500/10 px-4 py-2.5 text-sm text-red-200">
+          <div key={`err-${errorTick}`} role="alert" aria-live="assertive" className="vv-shake mb-4 flex items-center gap-2 rounded-xl border border-kumkum-500/40 bg-kumkum-500/10 px-4 py-2.5 text-sm text-red-200">
             <span aria-hidden="true">⚠️</span>
             {error}
           </div>
         )}
 
-        <div key={step} className="vv-step">
+        <div key={`step-${step}`} className="vv-step">
           {/* ---------- step 1: event ---------- */}
           {step === 0 && (
             <div>

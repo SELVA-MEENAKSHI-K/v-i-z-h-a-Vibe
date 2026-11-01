@@ -56,6 +56,18 @@ body {
   }
 }
 
+/* Manual "Pause animations" toggle. Mirrors prefers-reduced-motion so the user
+   can stop all motion regardless of their OS setting. The AnimationToggle
+   component sets data-vv-motion="off" on <html> and persists it in
+   localStorage. Default (attribute absent) keeps the full festival look. */
+html[data-vv-motion="off"] *,
+html[data-vv-motion="off"] *::before,
+html[data-vv-motion="off"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
 /* Native <select> dropdowns: readable dark popup with high-contrast text.
    Browsers render the open option list on the OS surface and ignore most
    parent styles, so we set opaque colors directly on select/option. */

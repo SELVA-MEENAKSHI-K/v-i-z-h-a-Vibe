@@ -368,7 +368,9 @@ body { background: transparent !important; background-image: none !important; }
     radial-gradient(90% 60% at 50% 108%, rgba(255, 150, 40, 0.38), transparent 70%),
     linear-gradient(165deg, #3a1250 0%, #4d1238 38%, #2c0f3f 72%, #1c0b2c 100%);
 }
-.vv-fest-veil { position: absolute; inset: 0; background: rgba(12, 8, 22, 0.28); }
+/* Darkened veil over the animated backdrop so body/placeholder/chip text meets
+   WCAG AA contrast against the busy festival scene (was 0.28 — too light). */
+.vv-fest-veil { position: absolute; inset: 0; background: rgba(10, 7, 18, 0.52); }
 
 .vv-fest-glow { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: 0.55; will-change: transform; }
 .vv-fest-glow-a { width: 52vw; height: 52vw; left: -14vw; top: -18vw; background: #c026d3; animation: vv-drift-a 22s ease-in-out infinite alternate; }
@@ -423,3 +425,19 @@ body { background: transparent !important; background-image: none !important; }
   .vv-fest-spark, .vv-fest-petal { display: none; }
   .vv-fest-star { opacity: 0.6; }
 }
+
+/* Manual "Pause animations" toggle (data-vv-motion="off" on <html>). Mirrors the
+   prefers-reduced-motion rules above for the festival backdrop, hero stage,
+   word/aurora/shine effects and the cursor glow, so the toggle stops ALL motion. */
+html[data-vv-motion="off"] .vv-fest * { animation: none !important; }
+html[data-vv-motion="off"] .vv-fest-spark,
+html[data-vv-motion="off"] .vv-fest-petal { display: none; }
+html[data-vv-motion="off"] .vv-fest-star { opacity: 0.6; }
+html[data-vv-motion="off"] .vv-stage *,
+html[data-vv-motion="off"] .vv-swap { animation: none !important; }
+html[data-vv-motion="off"] .vv-word,
+html[data-vv-motion="off"] .vv-reveal-shown { animation: none !important; opacity: 1 !important; transform: none !important; }
+html[data-vv-motion="off"] .vv-aurora,
+html[data-vv-motion="off"] .vv-shine::after { animation: none !important; }
+html[data-vv-motion="off"] .vv-tilt-inner { transform: none !important; }
+html[data-vv-motion="off"] .vv-cursor-glow { display: none; }

@@ -28,11 +28,17 @@ export async function POST(req: Request) {
       // No email provider configured in this environment: log server-side only.
       // With EMAIL_PROVIDER_API_KEY set, send the link via the provider here.
       if (process.env.EMAIL_PROVIDER_API_KEY) {
-        // Placeholder: integrate the configured provider. Never log the token.
-        console.log(`[auth] password reset email queued for ${email}`);
-      } else {
-        console.log(`[auth] (no email provider) reset link for ${email}: ${resetUrl}`);
+        // Placeholder: integrate the configured provider here. Never log the
+        // token or the reset URL — only a non-sensitive queued notice.
+        console.warn("[auth] password reset email queued");
+      } else if (process.env.NODE_ENV !== "production") {
+        // Dev convenience ONLY (no provider configured, non-production): surface
+        // the reset link in the server logs so the flow is testable locally.
+        // In production this branch never runs, so the link is never logged.
+        console.warn(`[auth] (dev, no email provider) reset link: ${resetUrl}`);
       }
+      // Production with no provider: we create the token but never log/return
+      // the link. (Configure EMAIL_PROVIDER_API_KEY to deliver it by email.)
     }
 
     return ok({ message: "If that email is registered, a reset link has been sent." });
